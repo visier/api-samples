@@ -1,0 +1,13 @@
+{
+  "name": "nodejs",
+  "version": "0.1.0",
+  "description": "Sample showing password grant authentication against Visier platform",
+  "main": "index.js",
+  "repository": "https://github.com/visier/api-samples",
+  "author": "Visier",
+  "license": "Apache 2.0",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.5.0"
+  }
+}
