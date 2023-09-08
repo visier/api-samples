@@ -2,12 +2,12 @@
 A collection of limited-scope sample applications and snippets using public Visier APIs
 
 ## Structure
-The samples are organized first by functional area and then by language and then (optionally) by major library. For example, you will find the OAuth 2.0 three-legged authentication sample for [ReactJS](https://react.dev/) under:
+The samples are organized first by functional area and then by language and then (optionally) by major library. For example, you will find the OAuth 2.0 three-legged authentication sample for Python using the [Visier Python Connector](https://github.com/visier/connector-python) under:
 ```
 authentication
     oauth-code
-        javascript
-            reactjs
+        python
+            connector
 ```
 
 ### Functional Areas
