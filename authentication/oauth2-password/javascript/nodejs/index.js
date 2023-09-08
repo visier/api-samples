@@ -15,7 +15,7 @@
 import axios from "axios";
 
 /**
- * See 
+ * See the environment variable template file for details on how to set these values.
  */
 const apikey = process.env.VISIER_APIKEY
 const vhost = process.env.VISIER_HOST
@@ -58,7 +58,7 @@ const authenticate = async instance => {
         const tokenType = jwt.token_type
         const accessToken = jwt.access_token
 
-        // Request interceptor without restry logic.
+        // Request interceptor without retry logic.
         instance.interceptors.request.use(config => {
             config.headers.Authorization = `${tokenType} ${accessToken}`
             return config
@@ -89,7 +89,6 @@ try {
         }
     })
 
-    // One-shot authentication with axios instance update
     await authenticate(instance)
     const r = await sampleApiCall(instance)
     console.log(r)
