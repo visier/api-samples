@@ -1,8 +1,15 @@
 "use client"
-import { useAuth } from "@/hooks/useAuth"
+import { useState } from "react";
+import SelectEmployee from "./select-employee";
+import DisplayEmployee from "./display-emplyee";
 
 export default function Employee() {
-    const { accessToken, tokenType } = useAuth();
+    const [selectedEmp, setSelectedEmp] = useState();
 
-    return (<p>Show the Employee info. Make calls using {tokenType} {accessToken}</p>)
+    return (
+        <>
+            <SelectEmployee setEmp={setSelectedEmp}></SelectEmployee>
+            <DisplayEmployee empId={selectedEmp}></DisplayEmployee>
+        </>
+    )
 }

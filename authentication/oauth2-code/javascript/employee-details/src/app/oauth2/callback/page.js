@@ -28,6 +28,6 @@ export default function Callback() {
     if (accessToken !== null) {
         router.replace("/")
     } else {
-        return (<p>Preparing to authenticate.</p>)
+        return (<p>Redirecting...</p>)
     }
 }
