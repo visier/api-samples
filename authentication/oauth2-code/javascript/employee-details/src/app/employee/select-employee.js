@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { Form } from "react-bootstrap";
+import { useServer } from "@/hooks/useServer";
 
 export default function SelectEmployee({ setEmp }) {
     const [empFilter, setEmpFilter] = useState();
     const [empRecords, setEmpRecords] = useState([]);
+    const { instance } = useServer();
     
     const fetchEmployees = filter => {
-
+        console.log("run with filter " + filter)
+        // instance.get("/v1/data/model/analytic-objects/Employee/dimensions/EmployeeID_Hierarchy/members").then(r => {
+        //     console.log(r.data);
+        // })
     }
 
     const renderEmployees = () => {

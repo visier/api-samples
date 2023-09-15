@@ -34,8 +34,19 @@ export async function GET(request) {
             }
         });
         
-        const response = await instance.post("/v1/auth/oauth2/token", body);
-        return NextResponse.json(response.data)
+        const tokenResponse = await instance.post("/v1/auth/oauth2/token", body);
+        // Build a response that the client can use to initialize axios base config as well as well
+        // as request interceptors.
+        const response = {
+            config: {
+                baseURL: host,
+                headers: {
+                    apikey: apiKey
+                }
+            },
+            jwt: tokenResponse.data
+        }
+        return NextResponse.json(response)
     }
     console.error("Missing Client Secret");
     return new Response({ message: "Missing OAuth 2.0 credentials" }, { status: 401 });

@@ -1,13 +1,13 @@
 "use client"
 import Employee from './employee/page';
-import { useAuth } from '@/hooks/useAuth';
+import { useServer } from '@/hooks/useServer';
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
 import { useRouter } from 'next/navigation';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function Home() {
-    const { isAuthenticated, accessToken } = useAuth();
+    const { isAuthenticated } = useServer();
     const router = useRouter()
     return (
         <>
