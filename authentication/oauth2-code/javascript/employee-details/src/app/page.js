@@ -1,14 +1,15 @@
 "use client"
 import Employee from './employee/page';
-import { useServer } from '@/hooks/useServer';
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
 import { useRouter } from 'next/navigation';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import useCredsStore from '@/store/credsStore';
 
 export default function Home() {
-    const { isAuthenticated } = useServer();
     const router = useRouter()
+    const isAuthenticated = useCredsStore(s => s.isAuthenticated);
+
     return (
         <>
             {isAuthenticated() ? <Employee /> : (
