@@ -18,15 +18,18 @@ import { ErrorBoundary } from "react-error-boundary";
 import SelectEmployee from "./select-employee";
 import DisplayEmployee from "./display-employee";
 import Error from "./error";
+import { Card } from "react-bootstrap";
 
 export default function Employee() {
     const [selectedEmpId, setSelectedEmpId] = useState();
 
     console
     return (
-        <ErrorBoundary fallback={<Error />}>
-            <SelectEmployee setSelectedEmpId={setSelectedEmpId}></SelectEmployee>
-            <DisplayEmployee selectedEmpId={selectedEmpId}></DisplayEmployee>
-        </ErrorBoundary>
+        <Card style={{ width: '60rem'}}>
+            <ErrorBoundary fallback={<Error />}>
+                <SelectEmployee setSelectedEmpId={setSelectedEmpId}></SelectEmployee>
+                <DisplayEmployee selectedEmpId={selectedEmpId}></DisplayEmployee>
+            </ErrorBoundary>
+        </Card>
     )
 }

@@ -28,12 +28,13 @@ export default function Home() {
         <>
             {isAuthenticated() ? <Employee /> : (
                 <>
-                    <Card style={{ width: '30rem' }}>
+                    <Card style={{ width: '40rem'}}>
                         <Card.Body>
                             <Card.Title>Visier Employee Data Sample</Card.Title>
                             <Card.Text>
                                 Sample Next.js application that shows the three-legged (authorization_code flow) OAuth authentication.
-                                Instructions for how to set up the environment goes here.
+                                
+                                <br />Instructions for how to set up the environment goes here.
                             </Card.Text>
                             <Button variant="primary" onClick={() => router.push("/oauth2/login")}>Login to Visier</Button>
                         </Card.Body>

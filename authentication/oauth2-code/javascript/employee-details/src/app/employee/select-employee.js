@@ -24,9 +24,10 @@ export default function SelectEmployee({ setSelectedEmpId }) {
         const payload = await response.json()
         if (payload.members !== undefined && payload.members.length > 0) {
             const employeeRecords = payload.members.map(m => ({
-                id: m.path[0],
+                key: m.path[0],
                 name: m.displayName
             }));
+
             setEmpRecords(employeeRecords);
         } else {
             setEmpRecords([]);
@@ -55,9 +56,9 @@ export default function SelectEmployee({ setSelectedEmpId }) {
 
     const renderEmployees = () => {
         if (empRecords.length === 0) {
-            return (<option key="-1" value="-1" disabled>No employees available ot matching the filter.</option>)
+            return (<option key="-1" value="-1" disabled>No employees available or matching the filter.</option>)
         } else {
-            return empRecords.map(rec => (<option key={rec.id} value={rec.id}>{rec.name}</option>))
+            return empRecords.map(rec => (<option key={rec.key} value={rec.key}>{rec.name}</option>))
         }
     }
 
