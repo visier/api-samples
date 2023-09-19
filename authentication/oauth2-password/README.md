@@ -1,10 +1,10 @@
-# Password Grant OAuth 2.0
-Samples that uses the password grant type to authenticate against the Visier platform.
+# OAuth 2.0 Password Grant Type
+Samples that use the `password` grant type to authenticate against the Visier platform.
 
 ## Prerequisites
-Password grant authentication requires the following information:
+Password authentication requires the following information:
 * API Key
-* Tenanted Visier Public API URI
+* Visier API URI. Example: `https://{vanity_name}.api.visier.io/`
 * OAuth 2.0 Client ID
 * OAuth 2.0 Client Secret
 * Username
