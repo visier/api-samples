@@ -19,6 +19,7 @@ import Card from 'react-bootstrap/Card';
 import { useRouter } from 'next/navigation';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import useCredsStore from '@/store/credsStore';
+import { Alert } from 'react-bootstrap';
 
 export default function Home() {
     const router = useRouter()
@@ -32,10 +33,13 @@ export default function Home() {
                         <Card.Body>
                             <Card.Title>Visier Employee Data Sample</Card.Title>
                             <Card.Text>
-                                Sample Next.js application that shows the three-legged (authorization_code flow) OAuth authentication.
-                                
-                                <br />Instructions for how to set up the environment goes here.
+                                Sample Next.js application that shows the three-legged (authorization_code flow) OAuth authentication. 
+                                Please consult the README.md file for how to configure the Visier access using OAuth 2.0.
                             </Card.Text>
+                            <Alert key="warning" variant="warning">
+                                <b>Please note!</b> This is a sample application whose express purpose is to showcase Visier OAuth authentication. 
+                                Please consult the LICENSE file for acceptable use.
+                            </Alert>
                             <Button variant="primary" onClick={() => router.push("/oauth2/login")}>Login to Visier</Button>
                         </Card.Body>
                     </Card>
