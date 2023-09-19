@@ -30,7 +30,7 @@ export async function GET(request) {
             },
             auth: {
                 username: clientId,
-                password: clientSecret
+                password: encodeURI(clientSecret)
             }
         });
         
