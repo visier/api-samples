@@ -12,21 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-"use client"
-import { useState } from "react";
-import { ErrorBoundary } from "react-error-boundary";
-import SelectEmployee from "./select-employee";
-import DisplayEmployee from "./display-employee";
-import Error from "./error";
+import { useEffect } from "react";
+import { Alert } from "react-bootstrap";
 
-export default function Employee() {
-    const [selectedEmpId, setSelectedEmpId] = useState();
+export default function Error({ error, reset }) {
+    useEffect(() => {
+        console.error(error);
+    }, [error]);
 
-    console
     return (
-        <ErrorBoundary fallback={<Error />}>
-            <SelectEmployee setSelectedEmpId={setSelectedEmpId}></SelectEmployee>
-            <DisplayEmployee selectedEmpId={selectedEmpId}></DisplayEmployee>
-        </ErrorBoundary>
-    )
+        <Alert key="danger" variant="danger" dismissible>
+            Unable to fetch employee details. {error}
+        </Alert>
+    );
 }

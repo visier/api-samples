@@ -11,22 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-"use client"
-import { useState } from "react";
-import { ErrorBoundary } from "react-error-boundary";
-import SelectEmployee from "./select-employee";
-import DisplayEmployee from "./display-employee";
-import Error from "./error";
-
-export default function Employee() {
-    const [selectedEmpId, setSelectedEmpId] = useState();
-
-    console
+import { Table
+ } from "react-bootstrap";
+export default function DisplayProperties({ details }) {
+    console.log(details);
+    const makeRows = () => {
+        return details.map( prop => {
+            return (<tr key={prop.name}>
+                <td>{prop.name}</td>
+                <td>{prop.value}</td>
+            </tr>)
+        })
+    }
     return (
-        <ErrorBoundary fallback={<Error />}>
-            <SelectEmployee setSelectedEmpId={setSelectedEmpId}></SelectEmployee>
-            <DisplayEmployee selectedEmpId={selectedEmpId}></DisplayEmployee>
-        </ErrorBoundary>
+        <Table striped bordered>
+        <thead>
+            <tr>
+                <th>Property</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {makeRows()}
+        </tbody>
+    </Table>
     )
 }

@@ -19,10 +19,14 @@ export async function POST(req) {
     const instance = makeInstance(delegateRequestBody);
     let responsePromise;
 
+    console.log(delegateRequestBody.method + " " + delegateRequestBody.url)
     switch (delegateRequestBody.method) {
+        case 'POST':
+            responsePromise = instance.post(delegateRequestBody.url, delegateRequestBody.body).then(makeSuccesResponse).catch(makeErrorResponse)
+            break;
+
         case 'GET':
         default:
-            console.log(delegateRequestBody.url)
             responsePromise = instance.get(delegateRequestBody.url).then(makeSuccesResponse).catch(makeErrorResponse)
             break;
     }

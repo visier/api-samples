@@ -16,7 +16,7 @@ import { useState, useEffect } from "react";
 import { Form } from "react-bootstrap";
 import useCredsStore from "@/store/credsStore";
 
-export default function SelectEmployee({ setEmp }) {
+export default function SelectEmployee({ setSelectedEmpId }) {
     const [empRecords, setEmpRecords] = useState([]);
     const [authHeader, config] = useCredsStore(s => [s.authHeader, s.config]);
     
@@ -62,8 +62,8 @@ export default function SelectEmployee({ setEmp }) {
     }
 
     const employeeSelected = e => {
-        const empID = e.target.value;
-        setEmp(empID);
+        const employeeId = e.target.value;
+        setSelectedEmpId(employeeId);
     }
     
     useEffect(() => {
@@ -75,7 +75,7 @@ export default function SelectEmployee({ setEmp }) {
             <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
                 <Form.Label>Full name filter</Form.Label>
                 <Form.Control type="text"
-                    placeholder="Start typing in the name of the employee. Results are capped at 50." 
+                    placeholder="Start typing in the name of the employee. Filter is case-sensitive. Results are capped at 50 items." 
                     onInput={fetchEmployees}/>
             </Form.Group>
             <Form.Group className="mb-3" controlId="exampleForm.ControlTextarea1">
