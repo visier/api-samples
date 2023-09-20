@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import useCredsStore from '@/store/credsStore';
 import { Alert } from 'react-bootstrap';
+import React from 'react';
 
 export default function Home() {
     const router = useRouter()
@@ -37,8 +38,7 @@ export default function Home() {
                                 Please consult the README.md file for how to configure the Visier access using OAuth 2.0.
                             </Card.Text>
                             <Alert key="warning" variant="warning">
-                                <b>Please note!</b> This is a sample application whose express purpose is to showcase Visier OAuth authentication. 
-                                Please consult the LICENSE file for acceptable use.
+                                <b>Note:</b> This is a sample application intended to showcase Visier OAuth authentication. For information about acceptable use, see the LICENSE file.
                             </Alert>
                             <Button variant="primary" onClick={() => router.push("/oauth2/login")}>Login to Visier</Button>
                         </Card.Body>

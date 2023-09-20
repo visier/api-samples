@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+"use client"
 import { useEffect } from "react";
 import { Alert } from "react-bootstrap";
+import React from "react";
 
-export default function Error({ error, reset }) {
+export default function Error({ error }) {
     useEffect(() => {
         console.error(error);
     }, [error]);

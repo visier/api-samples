@@ -13,7 +13,7 @@
 // limitations under the License.
 
 "use client"
-import { useState } from "react";
+import React, { useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import SelectEmployee from "./select-employee";
 import DisplayEmployee from "./display-employee";

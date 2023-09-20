@@ -13,7 +13,7 @@
 // limitations under the License.
 
 "use client"
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import useCredsStore from "@/store/credsStore";
 import { Alert } from "react-bootstrap";
 import DisplayProperties from "./display-properties";

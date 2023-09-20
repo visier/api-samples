@@ -49,7 +49,7 @@ export async function GET(request) {
         });
         
         const tokenResponse = await instance.post("/v1/auth/oauth2/token", body);
-        // Build a response that the client can use to initialize axios base config as well as well
+        // Build a response that the client can use to initialize axios base config as well
         // as request interceptors.
         const response = {
             config: {

@@ -11,8 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { Table
- } from "react-bootstrap";
+
+import { Table } from "react-bootstrap";
+import React from "react";
+
 export default function DisplayProperties({ details }) {
     console.log(details);
     const makeRows = () => {

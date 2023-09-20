@@ -14,7 +14,7 @@
 
 "use client"
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import useCredsStore from '@/store/credsStore';
 
 export default function Callback() {
@@ -28,21 +28,19 @@ export default function Callback() {
 
     const [setJWT, setConfig] = useCredsStore(s => [s.setJWT, s.setConfig]);
     
+    const callToken = async () => {
+        const response = await fetch("/oauth2/token?code=" + code);
+        if (response.ok) {
+            const responseBody = await response.json();
 
+            setJWT(responseBody.jwt);
+            setConfig(responseBody.config)
+            
+            setIsAuthenticated(true);
+        }
+    }
     useEffect(() => {
         if (!isAuthenticated) {
-            async function callToken() {
-                const response = await fetch("/oauth2/token?code=" + code);
-                if (response.ok) {
-                    const responseBody = await response.json();
-
-                    setJWT(responseBody.jwt);
-                    setConfig(responseBody.config)
-                    
-                    setIsAuthenticated(true);
-                }
-            }
-
             callToken();
         }
     }, [isAuthenticated]);

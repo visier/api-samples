@@ -13,12 +13,11 @@
 // limitations under the License.
 
 import { NextResponse } from 'next/server';
-
 const clientId = process.env.VISIER_CLIENT_ID
 const host = process.env.VISIER_HOST
 const apiKey = process.env.VISIER_APIKEY
 
-export async function GET(request) {
+export async function GET() {
     const isDefined = id => id !== undefined && id !== ""
 
     if (isDefined(clientId) && isDefined(host) && isDefined(apiKey)) {
