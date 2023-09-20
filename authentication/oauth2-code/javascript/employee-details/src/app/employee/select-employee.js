@@ -39,12 +39,12 @@ export default function SelectEmployee({ setSelectedEmpId }) {
     }
 
     const fetchEmployees = e => {
-        const filter = e.target.value;
+        const filter = encodeURIComponent(e.target.value);
         const filterArgs = filter.length > 0 ? `&field=either&filter=.*${filter}.*` : "";
         const requestBody = {
             auth: authHeader(),
             config,
-            url: encodeURI(`/v1/data/model/analytic-objects/Employee/dimensions/EmployeeID_Hierarchy/members?limit=50${filterArgs}`),
+            url: `/v1/data/model/analytic-objects/Employee/dimensions/EmployeeID_Hierarchy/members?limit=50${filterArgs}`,
             method: "GET"
         }
 

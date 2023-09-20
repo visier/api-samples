@@ -14,12 +14,17 @@
 
 import axios from 'axios';
 
+/**
+ * General wrapper for making Visier Public API calls.
+ * 
+ * @param {*} req Request definition containing the Visier API request details
+ * @returns The response payload from the Visier API
+ */
 export async function POST(req) {
     const delegateRequestBody = await req.json();
     const instance = makeInstance(delegateRequestBody);
     let responsePromise;
 
-    console.log(delegateRequestBody.method + " " + delegateRequestBody.url)
     switch (delegateRequestBody.method) {
         case 'POST':
             responsePromise = instance.post(delegateRequestBody.url, delegateRequestBody.body).then(makeSuccesResponse).catch(makeErrorResponse)
@@ -56,6 +61,5 @@ const makeSuccesResponse = response => {
 };
 
 const makeErrorResponse = error => {
-    console.error("Error", error)
     return new Response(error, { status: error.status })
 }

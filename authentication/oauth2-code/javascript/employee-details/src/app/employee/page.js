@@ -23,7 +23,6 @@ import { Card } from "react-bootstrap";
 export default function Employee() {
     const [selectedEmpId, setSelectedEmpId] = useState();
 
-    console
     return (
         <Card style={{ width: '60rem'}}>
             <ErrorBoundary fallback={<Error />}>

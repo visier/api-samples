@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This sample uses zustand to manage shared application state.
+// Documentation: https://docs.pmnd.rs/zustand/getting-started/introduction
 import { create } from 'zustand';
 
 const useCredsStore = create((set, get) => ({

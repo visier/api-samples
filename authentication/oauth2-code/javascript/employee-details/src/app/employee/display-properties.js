@@ -16,7 +16,6 @@ import { Table } from "react-bootstrap";
 import React from "react";
 
 export default function DisplayProperties({ details }) {
-    console.log(details);
     const makeRows = () => {
         return details.map( prop => {
             return (<tr key={prop.name}>
@@ -25,6 +24,7 @@ export default function DisplayProperties({ details }) {
             </tr>)
         })
     }
+
     return (
         <Table striped bordered>
         <thead>
