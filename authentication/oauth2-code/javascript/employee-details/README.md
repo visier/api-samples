@@ -16,8 +16,8 @@ To successfully authenticate using Visier's OAuth APIs, you must register a clie
 The application-specific values are provided to the application through an environment file. 
 Before starting the application using `yarn dev`, create a file named `.env.development.local` to provide actual values for the following variables:
 ```sh
+VISIER_HOST=https://customer-specific.api.visier.io
 VISIER_CLIENT_ID='client-id-from-registration'
 VISIER_CLIENT_SECRET='client-secret-from-registration'
-VISIER_HOST='api-fqdn-with-protocol'
 VISIER_APIKEY='visier-provided-api-key'
 ```

@@ -10,3 +10,4 @@ Authorization code authentication requires the following information:
 
 ## Samples
 * [Python](python)
+* [React](javascript/employee-details)
