@@ -11,6 +11,9 @@ In Unix-style shells and an environment file called `.env`, the environment is s
 source .env
 ```
 
+### Dotenv Environment
+Some sample applications use libraries that read environment files. Libraries that read environment files are more flexible than reading the variable values set in the shell. This repository uses Dotenv to load environment files (`.env`). The contents of each `.env` file differs; you cannot execute shell commands in `.env` files and should not export variables from any `.env` files.
+
 ## Samples
 * [Authorization Code](oauth2-code)
 * [Password](oauth2-password)
