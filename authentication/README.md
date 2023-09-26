@@ -12,7 +12,7 @@ source .env
 ```
 
 ### Dotenv Environment
-Some sample applications take advantage of libraries that read environment files. This is more flexible than reading the values of the variables that have been set in the shell. These environment files, often called `.env` as well. The contents of the files will differ however. No shell commands may be executed in these files. Nor should variables be exported.
+Some sample applications use libraries that read environment files. Libraries that read environment files are more flexible than reading the variable values set in the shell. This repository uses Dotenv to load environment files (`.env`). The contents of each `.env` file differs; you cannot execute shell commands in `.env` files and should not export variables from any `.env` files.
 
 ## Samples
 * [Authorization Code](oauth2-code)
