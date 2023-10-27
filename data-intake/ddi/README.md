@@ -6,7 +6,7 @@ When provisioning data to Visier using the Data Direct API, it's important to un
 
 The following diagram outlines these modes:
 ![Three Direct Data Intake API Load Modes](/assets/images/load-options.png)
-* The ***Primary**, which is also the default mode is where all objects are loaded using the Direct Data API method.
+* The **Primary**, which is also the default mode is where all objects are loaded using the Direct Data API method.
 * When in **Supplemental** mode, some - but crucially, not all - objects are loaded exclusively using the Direct Data API.
 * The **Extension** mode is the most complex one where, potentially in addition to loading objects entirely using the Direct Data API and other objects using other methods, you need to load at least one object from **both** Direct Data API and others. There are caveats:
     * The object in question is primarily loaded through a mechanism _other than_ Direct Data API.
