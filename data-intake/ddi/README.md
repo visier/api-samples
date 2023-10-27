@@ -13,4 +13,4 @@ The following diagram outlines these modes:
     * The various load processes, including Direct Data API, must not attempt to load _the same properties_ on the object in question.
 
 ## Samples
-* [Extension Table](extension-table/jupyter/) provides a sample in the form of a Jupyter notebook showing how query, enrich and write data back to Visier.
+* [Extension Table](extension-table/jupyter/name-rank-sample.ipynb) provides a sample in the form of a Jupyter notebook showing how query, enrich and write data back to Visier.
