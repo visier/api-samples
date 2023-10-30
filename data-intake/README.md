@@ -1,5 +1,5 @@
 # Data Intake
-Data Intake refers to the process where customers use APIs to push their data files to Visier. The Visier system will run a process named Data Provisioning to make the data available for query and analysis.
+Data intake is the process of sending data files to Visier using APIs. After Visier receives the data files, the platform runs data provisioning processes to make the data available to users to query and analyze.
 
 ## Samples
-* [Direct Data Intake](ddi) provides samples based on the Direct Data API
+* [Direct Data Intake](ddi) provides code samples for the Direct Data Intake API.
