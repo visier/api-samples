@@ -12,3 +12,4 @@ authentication
 
 ### Functional Areas
 * [Authentication](authentication) provides samples showing the various methods by which users can authenticate against the Visier platform.
+* [Data Intake](data-intake) provides samples showing how to use APIs to send data to your Visier tenant.
