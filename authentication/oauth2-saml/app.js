@@ -42,7 +42,7 @@ app.post('/visier-jwt', async (req, res) => {
         // Extract JWT from the response
         const access_token = response.data.access_token;
 
-        // Here's we're calling an API using the JWT for authentication to provde that the JWT is valid.
+        // Call an API using the JWT for authentication to provde that the JWT is valid
         const endpointUrl = `${process.env.VISIER_HOST}/v1/data/model/metrics/employeeCount`
         const headers = {
           apikey: process.env.VISIER_APIKEY,
