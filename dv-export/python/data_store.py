@@ -77,7 +77,6 @@ class SQLAlchemyDataStore(DataStore):
             name = column_info.name
             sql_data_type = self.get_data_store_data_type_from_dv_export_data_type(column_info.data_type)
 
-            # todo: Hack until https://visiercorp.atlassian.net/browse/VAN-120816 is fixed
             if column_info.name == 'Location_LEVEL':
                 nullable = True
             else:
