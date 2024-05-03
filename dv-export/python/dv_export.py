@@ -7,7 +7,7 @@ from visier.api import DVExportApiClient
 from data_store import DataStore
 from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, extract_tables
 
-logger = logging.getLogger("dv_export_wrapper")
+logger = logging.getLogger("dv_export")
 
 
 @dataclass
