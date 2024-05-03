@@ -9,7 +9,7 @@ Python 3.x installed on your system.
 You have cloned the repository.
 
 Installed dependencies: `dotenv`, `visier-connector`, `pandas`, and `sqlalchemy`. You can install them using `pip` and the provided `requirements.txt`:
-```agsl
+```
 # cd into ../dv-export/python working directory
 python3 -m venv venv
 source venv/bin/activate
