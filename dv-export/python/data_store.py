@@ -4,7 +4,7 @@ import pandas as pd
 
 from sqlalchemy import (Column, Table, create_engine, MetaData, Integer,
                         String, Numeric, BigInteger, Boolean, insert, text)
-from dv_export_model import DVEXportDataType, ColumnInfo, TableInfo
+from dv_export_model import DVExportDataType, ColumnInfo, TableInfo
 
 logger = logging.getLogger("data_store")
 
@@ -13,13 +13,13 @@ def convert_data_types_to_df_dtype_dict(column_infos) -> dict:
     column_name_to_dtype = {}
     for column in column_infos:
         dtype = ''
-        if column.data_type == DVEXportDataType.Date or column.data_type == DVEXportDataType.Integer:
+        if column.data_type == DVExportDataType.Date or column.data_type == DVExportDataType.Integer:
             dtype = 'Int64'
-        elif column.data_type == DVEXportDataType.String:
+        elif column.data_type == DVExportDataType.String:
             dtype = 'object'
-        elif column.data_type == DVEXportDataType.Number:
+        elif column.data_type == DVExportDataType.Number:
             dtype = 'float64'
-        elif column.data_type == DVEXportDataType.Boolean:
+        elif column.data_type == DVExportDataType.Boolean:
             dtype = 'boolean'
         column_name_to_dtype[column.name] = dtype
     return column_name_to_dtype
@@ -36,7 +36,7 @@ class DataStore(ABC):
         pass
 
     @abstractmethod
-    def get_data_store_data_type_from_dv_export_data_type(self, data_type: DVEXportDataType):
+    def get_data_store_data_type_from_dv_export_data_type(self, data_type: DVExportDataType):
         pass
 
     @abstractmethod
@@ -57,16 +57,16 @@ class SQLAlchemyDataStore(DataStore):
         self.metadata = MetaData()
         self.metadata.reflect(self.engine)
 
-    def get_data_store_data_type_from_dv_export_data_type(self, data_type: DVEXportDataType):
-        if data_type == DVEXportDataType.String:
+    def get_data_store_data_type_from_dv_export_data_type(self, data_type: DVExportDataType):
+        if data_type == DVExportDataType.String:
             return String()
-        elif data_type == DVEXportDataType.Integer:
+        elif data_type == DVExportDataType.Integer:
             return Integer()
-        elif data_type == DVEXportDataType.Number:
+        elif data_type == DVExportDataType.Number:
             return Numeric()
-        elif data_type == DVEXportDataType.Date:
+        elif data_type == DVExportDataType.Date:
             return BigInteger()
-        elif data_type == DVEXportDataType.Boolean:
+        elif data_type == DVExportDataType.Boolean:
             return Boolean()
         else:
             raise NotImplementedError(f"data_type={data_type} has no corresponding data type for SQLAlchemy")

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-class DVEXportDataType(Enum):
+class DVExportDataType(Enum):
     String = 1
     Integer = 2
     Number = 3
@@ -10,9 +10,9 @@ class DVEXportDataType(Enum):
     Boolean = 5
 
 
-def string_to_data_type(string_value: str) -> DVEXportDataType:
+def string_to_data_type(string_value: str) -> DVExportDataType:
     try:
-        return DVEXportDataType[string_value]
+        return DVExportDataType[string_value]
     except KeyError:
         raise ValueError(f"No such DataType: {string_value}")
 
@@ -26,7 +26,7 @@ class FileInfo:
 @dataclass
 class ColumnInfo:
     name: str
-    data_type: DVEXportDataType
+    data_type: DVExportDataType
     allows_null: bool
     primary_key: bool
 
@@ -91,7 +91,7 @@ def extract_column_infos(columns: list[dict]) -> list[ColumnInfo]:
     for common_column in columns:
         name = common_column['name']
         data_type: str = common_column['dataType']
-        data_type_enum: DVEXportDataType = string_to_data_type(data_type)
+        data_type_enum: DVExportDataType = string_to_data_type(data_type)
         allows_null = bool(common_column['allowsNull'])
         is_primary_key = bool(common_column['isPrimaryKeyComponent'])
         column_infos.append(ColumnInfo(name, data_type_enum, allows_null, is_primary_key))
