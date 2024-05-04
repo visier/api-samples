@@ -21,26 +21,44 @@ Configured the .env file. The provided .env file contains parameters specific to
 ### Visier user configuration
 See https://github.com/visier/connector-python for more details on authentication through the Visier Python Connector.
 
-In addition to the capabilities mentioned above, the user will need the `Manage Jobs` capability to be able to schedule DV export jobs. 
-The user will also need read access to data. The user will need a profile which grants them API level access to the 
-`Data` and `Model` capabilities.
+In addition to the capabilities mentioned above, the user will need:
+- The `Manage Jobs` capability to be able to schedule DV export jobs. 
+- Read access to data. 
+- A profile which grants them API level access to the `Data` and `Model` capabilities.
 
 ### Usage
 To use the script, you primarily interact with `main.py`. Here's a brief overview of its functionality:
 - It configures logging settings.
-- Loads environment variables from the .env file. 
+- Parses command line arguments
+- Loads environment variables from the .env file.
 - Authenticates with Visier using the provided credentials through the Visier Python Connector
 - Initiates a `DV Export` session.
 - Processes metadata for data version exports, either initial or delta, based on the provided parameters.
 
-Run the script with `python3 main.py`. For easy testing, use a local `SQLite` database file by providing a `DB_URL` like
-`sqlite:///visier-export-test-database.db` in the .env file. `SQLAlchemy` will create a `.db` file in the local working
-directory which you can then interact with. 
+The script uses `argparse` to provide arguments such as the DV number to export, the base DV number to compute a diff from,
+or the export UUID to run the script with.
 
-Once you have run a successful DV export job, save the export UUID and provide it in the .env file as `EXPORT_UUID`.
+Use `python3 main.py -h` to see usages. Run an initial DV export with
+```python
+python3 main.py --data_version 12345
+```
+
+Run a delta DV export with
+```python
+python3 main.py --data_version 56789 --base_data_version 12345
+```
+
+If you want to use the same export results multiple times, save the export UUID and pass it as a command line argument.
 The export ID is logged multiple times throughout the script to both the `stdout` as well as a local `app.log` file.
 This will make the script retrieve the existing export metadata instead of running a new DV export job. This is useful for
 quick testing, as there is a limit to the number of DV export jobs you can run in a day and a DV export job can take some time.
+```python
+python3 main.py --export_uuid c303282d-f2e6-46ca-a04a-35d3d873712d
+```
+
+For easy testing, use a local `SQLite` database file by providing a `DB_URL` like
+`sqlite:///visier-export-test-database.db` in the .env file. `SQLAlchemy` will create a `.db` file in the local working
+directory which you can then interact with.
 
 ## Components
 `main.py`
