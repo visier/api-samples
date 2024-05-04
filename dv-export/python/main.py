@@ -19,16 +19,12 @@ console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger()
 logger.addHandler(console_handler)
 
-env_variables = dotenv_values()
-
-auth_keys = ['VISIER_HOST', 'VISIER_USERNAME', 'VISIER_PASSWORD', 'VISIER_APIKEY', 'VISIER_CLIENT_ID', 'VISIER_VANITY']
-auth_variables = {auth_key: env_variables[auth_key] for auth_key in auth_keys}
-auth = make_auth(env_values=auth_variables)
-
-dv_export_variables = {
-    export_key: env_variables[export_key] for export_key in env_variables.keys() if export_key not in auth_keys
+config = {
+    **dotenv_values(".env.dv-export"),
+    **dotenv_values(".env.visier-auth")
 }
 
+auth = make_auth(env_values=config)
 
 parser = argparse.ArgumentParser(description='DV Export API example script.')
 parser.add_argument('-d', '--data_version', type=int,
@@ -47,12 +43,12 @@ if args.data_version is None and args.export_uuid is None:
 with VisierSession(auth) as s:
     dv_export_client = DVExportApiClient(s, raise_on_error=True)
 
-    max_num_polls = int(dv_export_variables['JOB_STATUS_NUM_POLLS'])
-    poll_interval_seconds = int(dv_export_variables['JOB_STATUS_POLL_INTERVAL_SECONDS'])
-    delete_downloaded_files = bool(dv_export_variables['DELETE_DOWNLOADED_FILES'])
-    base_download_directory = dv_export_variables['BASE_DOWNLOAD_DIRECTORY']
+    max_num_polls = int(config['JOB_STATUS_NUM_POLLS'])
+    poll_interval_seconds = int(config['JOB_STATUS_POLL_INTERVAL_SECONDS'])
+    delete_downloaded_files = bool(config['DELETE_DOWNLOADED_FILES'])
+    base_download_directory = config['BASE_DOWNLOAD_DIRECTORY']
 
-    store = SQLAlchemyDataStore(dv_export_variables['DB_URL'])
+    store = SQLAlchemyDataStore(config['DB_URL'])
     dv_export = DVExport(dv_export_client, store)
 
     if args.export_uuid is None:
