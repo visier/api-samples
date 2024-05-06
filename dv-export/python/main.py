@@ -46,7 +46,7 @@ with VisierSession(auth) as s:
 
     max_num_polls = int(config[JOB_STATUS_NUM_POLLS])
     poll_interval_seconds = int(config[JOB_STATUS_POLL_INTERVAL_SECONDS])
-    delete_downloaded_files = bool(config[DELETE_BASE_DOWNLOAD_DIRECTORY_AFTER_EXPORT])
+    delete_downloaded_files = True if config[DELETE_BASE_DOWNLOAD_DIRECTORY_AFTER_EXPORT].upper() == 'TRUE' else False
     base_download_directory = config[BASE_DOWNLOAD_DIRECTORY]
 
     store = SQLAlchemyDataStore(config[DB_URL])
