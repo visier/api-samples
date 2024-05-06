@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from visier.api import DVExportApiClient
 from data_store import DataStore
-from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, extract_tables
+from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, convert_table_metadata_into_table_infos
 from constants import *
 
 logger = logging.getLogger('dv_export')
@@ -133,7 +133,7 @@ class DVExport:
                          metadata: dict[str, any],
                          data_store: DataStore,
                          base_download_dir: str):
-        tables = extract_tables(metadata[TABLES_KEY])
+        tables = convert_table_metadata_into_table_infos(metadata[TABLES_KEY])
         export_id = metadata[UUID_KEY]
 
         is_initial_export = len(metadata[TABLES_KEY]) == len(metadata[NEW_TABLES_KEY])
