@@ -138,7 +138,6 @@ class DVExport:
         :param tables: List of ``TableInfo`` to create and populate tables for
         :param export_id: UUID of the export metadata from a DV export job
         """
-        logger.info(f"Performing an initial export")
         itr = 1
         for table in tables:
             logger.info(f"Starting storage of table={table.name} ({itr} out of {len(tables)} tables) in data_store")
