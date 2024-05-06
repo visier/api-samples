@@ -77,11 +77,11 @@ def convert_table_metadata_into_table_infos(tables_metadata: list[dict[str, any]
         new_columns_and_files = table_metadata[NEW_COLUMNS_KEY]
         deleted_columns = table_metadata[DELETED_COLUMNS_KEY]
 
-        common_columns_column_infos = _extract_column_infos(common_columns_and_files[COLUMNS_KEY])
-        common_columns_file_infos = _extract_file_infos(common_columns_and_files[FILES_KEY])
+        common_columns_column_infos = _convert_column_metadata_into_column_infos(common_columns_and_files[COLUMNS_KEY])
+        common_columns_file_infos = _convert_file_metadata_into_file_infos(common_columns_and_files[FILES_KEY])
 
-        new_columns_column_infos = _extract_column_infos(new_columns_and_files[COLUMNS_KEY])
-        new_columns_file_infos = _extract_file_infos(new_columns_and_files[FILES_KEY])
+        new_columns_column_infos = _convert_column_metadata_into_column_infos(new_columns_and_files[COLUMNS_KEY])
+        new_columns_file_infos = _convert_file_metadata_into_file_infos(new_columns_and_files[FILES_KEY])
 
         tables.append(TableInfo(
             table_name,
@@ -95,7 +95,7 @@ def convert_table_metadata_into_table_infos(tables_metadata: list[dict[str, any]
     return tables
 
 
-def _extract_file_infos(files_metadata: list[dict]) -> list[FileInfo]:
+def _convert_file_metadata_into_file_infos(files_metadata: list[dict]) -> list[FileInfo]:
     """
     Converts a list of files from export metadata into a list of ``FileInfo``. A file has metadata describing its
     name and ID. The ID is used to identify the file when downloading from the DV export API in combination with the
@@ -112,7 +112,7 @@ def _extract_file_infos(files_metadata: list[dict]) -> list[FileInfo]:
     return file_infos
 
 
-def _extract_column_infos(columns_metadata: list[dict]) -> list[ColumnInfo]:
+def _convert_column_metadata_into_column_infos(columns_metadata: list[dict]) -> list[ColumnInfo]:
     """
     Converts a list of columns from export metadata into a list of ``ColumnInfo``. A column has metadata describing
     its name, data type, whether it allows null, and whether it's a part of the primary key for the table.
