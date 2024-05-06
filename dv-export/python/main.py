@@ -50,7 +50,7 @@ with VisierSession(auth) as s:
     base_download_directory = config[BASE_DOWNLOAD_DIRECTORY]
 
     store = SQLAlchemyDataStore(config[DB_URL])
-    dv_export = DVExport(dv_export_client, store)
+    dv_export = DVExport(dv_export_client, store, base_download_directory)
 
     if args.export_uuid is None:
         data_version_info = DataVersions(
@@ -63,7 +63,7 @@ with VisierSession(auth) as s:
     else:
         export_metadata = dv_export.get_export_metadata(args.export_uuid)
 
-    dv_export.process_metadata(export_metadata, store, base_download_directory)
+    dv_export.process_metadata(export_metadata)
 
     if delete_downloaded_files:
         shutil.rmtree(base_download_directory)

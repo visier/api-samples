@@ -21,9 +21,10 @@ class DVExport:
     """
     Orchestrates interactions between the ``DVExportApiClient`` and the output ``DataStore``
     """
-    def __init__(self, client: DVExportApiClient, data_store: DataStore):
+    def __init__(self, client: DVExportApiClient, data_store: DataStore, base_download_dir: str):
         self.client = client
         self.data_store = data_store
+        self.base_download_dir = base_download_dir
 
     def generate_data_version_export(self,
                                      dv_info: DataVersions,
@@ -129,63 +130,80 @@ class DVExport:
                                                      column_and_file_info.column_infos,
                                                      local_files_for_table)
 
+    def _create_and_populate_new_tables(self, tables: list[TableInfo], export_id: str):
+        """
+        Handle an initial export or adding new tables, where it is assumed all tables
+        need to be created for the first time.
+
+        :param tables: List of ``TableInfo`` to create and populate tables for
+        :param export_id: UUID of the export metadata from a DV export job
+        """
+        logger.info(f"Performing an initial export")
+        itr = 1
+        for table in tables:
+            logger.info(f"Starting storage of table={table.name} ({itr} out of {len(tables)} tables) in data_store")
+            download_directory = self.base_download_dir + export_id + "/new-columns/" + table.name + "/"
+            Path(download_directory).mkdir(parents=True, exist_ok=True)
+            self._create_and_populate_new_table(table,
+                                                table.columns.new_columns,
+                                                download_directory,
+                                                export_id)
+            itr += 1
+
+    def _handle_delta_export(self,
+                             tables: list[TableInfo],
+                             metadata: dict[str, any],
+                             export_id: str):
+        """
+        Handle a delta export, where there could be new, existing, and/or deleted tables to operate on.
+        :param tables: List of ``TableInfo`` to create or update tables for
+        :param metadata: Full DV export metadata to retrieve deleted and new tables
+        :param export_id: UUID of the export metadata from a DV export job
+        """
+        logger.info(f"Performing delta export")
+
+        deleted_tables = metadata[DELETED_TABLES_KEY]
+        for deleted_table in deleted_tables:
+            logger.info(f"Dropping table={deleted_table}")
+            self.data_store.drop_table(deleted_table)
+
+        new_tables = metadata[NEW_TABLES_KEY]
+        new_table_infos = [tbl_info for tbl_info in tables if tbl_info.name in new_tables]
+
+        self._create_and_populate_new_tables(new_table_infos, export_id)
+
+        existing_tables = [tbl_info for tbl_info in tables if tbl_info not in new_tables]
+        itr = 1
+        for existing_tbl in existing_tables:
+            logger.info(f"Processing existing table={existing_tbl.name} "
+                        f"({itr} out of {len(existing_tables)} tables)")
+            new_column_and_file_info = existing_tbl.columns.new_columns
+            deleted_columns = existing_tbl.columns.deleted_columns
+
+            if len(new_column_and_file_info.column_infos) == 0 and len(deleted_columns) == 0:
+                logger.info(f"There are no schema changes for table={existing_tbl.name}.")
+                download_directory = self.base_download_dir + export_id + "/common-columns/" + existing_tbl.name + "/"
+                Path(download_directory).mkdir(parents=True, exist_ok=True)
+                self._download_files_and_insert_into_table(existing_tbl.name,
+                                                           existing_tbl.columns.common_columns,
+                                                           download_directory,
+                                                           export_id)
+            itr += 1
+
     def process_metadata(self,
-                         metadata: dict[str, any],
-                         data_store: DataStore,
-                         base_download_dir: str):
+                         metadata: dict[str, any]):
+        """
+        Use the DV export metadata to create or update table definitions in output data store, download files for
+        those tables, then insert records from those files into output data store.
+
+        :param metadata: Full export metadata returned from a DV export job
+        """
         tables = convert_table_metadata_into_table_infos(metadata[TABLES_KEY])
         export_id = metadata[UUID_KEY]
 
         is_initial_export = len(metadata[TABLES_KEY]) == len(metadata[NEW_TABLES_KEY])
 
         if is_initial_export:
-            logger.info(f"Performing an initial export")
-            itr = 1
-            for table in tables:
-                logger.info(f"Starting storage of table={table.name} ({itr} out of {len(tables)} tables) in data_store")
-                download_directory = base_download_dir + export_id + "/new-columns/" + table.name + "/"
-                Path(download_directory).mkdir(parents=True, exist_ok=True)
-                self._create_and_populate_new_table(table,
-                                                    table.columns.new_columns,
-                                                    download_directory,
-                                                    export_id)
-                itr += 1
+            self._create_and_populate_new_tables(tables, export_id)
         else:
-            logger.info(f"Performing delta export")
-
-            deleted_tables = metadata[DELETED_TABLES_KEY]
-            for deleted_table in deleted_tables:
-                logger.info(f"Dropping table={deleted_table}")
-                data_store.drop_table(deleted_table)
-
-            new_tables = metadata[NEW_TABLES_KEY]
-            new_table_infos = [tbl_info for tbl_info in tables if tbl_info.name in new_tables]
-
-            itr = 1
-            for new_table_info in new_table_infos:
-                logger.info(
-                    f"Creating new table={new_table_info.name} ({itr} out of {len(new_table_infos)} new tables)")
-                self._create_and_populate_new_table(new_table_info,
-                                                    new_table_info.columns.new_columns,
-                                                    base_download_dir,
-                                                    export_id)
-                itr += 1
-
-            existing_tables = [tbl_info for tbl_info in tables if tbl_info not in new_tables]
-            itr = 1
-            for existing_tbl in existing_tables:
-                logger.info(f"Processing existing table={existing_tbl.name} "
-                            f"({itr} out of {len(existing_tables)} tables)")
-                new_column_and_file_info = existing_tbl.columns.new_columns
-                deleted_columns = existing_tbl.columns.deleted_columns
-
-                if len(new_column_and_file_info.column_infos) == 0 and len(deleted_columns) == 0:
-                    logger.info(f"There are no schema changes for table={existing_tbl.name}.")
-                    download_directory = (base_download_dir + export_id + "/common-columns/"
-                                          + existing_tbl.name + "/")
-                    Path(download_directory).mkdir(parents=True, exist_ok=True)
-                    self._download_files_and_insert_into_table(existing_tbl.name,
-                                                               existing_tbl.columns.common_columns,
-                                                               download_directory,
-                                                               export_id)
-                itr += 1
+            self._handle_delta_export(tables, metadata, export_id)
