@@ -5,6 +5,7 @@ import pandas as pd
 from sqlalchemy import (Column, Table, create_engine, MetaData, Integer,
                         String, Numeric, BigInteger, Boolean, insert, text)
 from dv_export_model import DVExportDataType, ColumnInfo, TableInfo
+from constants import *
 
 logger = logging.getLogger("data_store")
 
@@ -14,13 +15,13 @@ def convert_data_types_to_df_dtype_dict(column_infos) -> dict:
     for column in column_infos:
         dtype = ''
         if column.data_type == DVExportDataType.Date or column.data_type == DVExportDataType.Integer:
-            dtype = 'Int64'
+            dtype = PANDAS_DF_NULLABLE_INTEGER_INT64_DTYPE
         elif column.data_type == DVExportDataType.String:
-            dtype = 'object'
+            dtype = PANDAS_DF_MIXED_DTYPE
         elif column.data_type == DVExportDataType.Number:
-            dtype = 'float64'
+            dtype = PANDAS_DF_FLOAT64_DTYPE
         elif column.data_type == DVExportDataType.Boolean:
-            dtype = 'boolean'
+            dtype = PANDAS_DF_BOOLEAN_DTYPE
         column_name_to_dtype[column.name] = dtype
     return column_name_to_dtype
 
@@ -77,7 +78,7 @@ class SQLAlchemyDataStore(DataStore):
             name = column_info.name
             sql_data_type = self.get_data_store_data_type_from_dv_export_data_type(column_info.data_type)
 
-            if column_info.name == 'Location_LEVEL':
+            if column_info.name == LOCATION_LEVEL_COLUMN_NAME:
                 nullable = True
             else:
                 nullable = column_info.allows_null
@@ -111,11 +112,13 @@ class SQLAlchemyDataStore(DataStore):
                 df = pd.read_csv(f, dtype=clm_name_to_dtype, on_bad_lines='warn')
 
                 # after loading the DF, replace NaN with empty string for string columns
-                str_columns = {clm_name for clm_name, dtype in clm_name_to_dtype.items() if dtype == 'object'}
+                str_columns = {
+                    clm_name for clm_name, dtype in clm_name_to_dtype.items() if dtype == PANDAS_DF_MIXED_DTYPE
+                }
                 for str_column in str_columns:
                     df[str_column] = df[str_column].fillna('')
 
-                inserts = df[df['_DiffAction_'] == '+']
+                inserts = df[df[DIFF_ACTION_COLUMN_NAME] == DIFF_ACTION_INSERT]
                 if len(inserts.index) != 0:
                     with self.engine.connect() as conn:
                         alchemy_table = self.metadata.tables[tbl_name]

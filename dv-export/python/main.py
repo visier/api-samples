@@ -6,6 +6,7 @@ from visier.connector import VisierSession, make_auth
 from visier.api import DVExportApiClient
 from data_store import *
 from dv_export import DVExport, DataVersions
+from constants import *
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,8 +21,8 @@ logger = logging.getLogger()
 logger.addHandler(console_handler)
 
 config = {
-    **dotenv_values(".env.dv-export"),
-    **dotenv_values(".env.visier-auth")
+    **dotenv_values('.env.dv-export'),
+    **dotenv_values('.env.visier-auth')
 }
 
 auth = make_auth(env_values=config)
@@ -43,12 +44,12 @@ if args.data_version is None and args.export_uuid is None:
 with VisierSession(auth) as s:
     dv_export_client = DVExportApiClient(s, raise_on_error=True)
 
-    max_num_polls = int(config['JOB_STATUS_NUM_POLLS'])
-    poll_interval_seconds = int(config['JOB_STATUS_POLL_INTERVAL_SECONDS'])
-    delete_downloaded_files = bool(config['DELETE_DOWNLOADED_FILES'])
-    base_download_directory = config['BASE_DOWNLOAD_DIRECTORY']
+    max_num_polls = int(config[JOB_STATUS_NUM_POLLS])
+    poll_interval_seconds = int(config[JOB_STATUS_POLL_INTERVAL_SECONDS])
+    delete_downloaded_files = bool(config[DELETE_DOWNLOADED_FILES])
+    base_download_directory = config[BASE_DOWNLOAD_DIRECTORY]
 
-    store = SQLAlchemyDataStore(config['DB_URL'])
+    store = SQLAlchemyDataStore(config[DB_URL])
     dv_export = DVExport(dv_export_client, store)
 
     if args.export_uuid is None:

@@ -6,8 +6,9 @@ from typing import Optional
 from visier.api import DVExportApiClient
 from data_store import DataStore
 from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, extract_tables
+from constants import *
 
-logger = logging.getLogger("dv_export")
+logger = logging.getLogger('dv_export')
 
 
 @dataclass
@@ -41,7 +42,7 @@ class DVExport:
         else:
             schedule_response = self.client.schedule_delta_data_version_export_job(dv_info.data_version_number,
                                                                                    dv_info.base_data_version_number)
-        job_id: str = schedule_response.json()['jobUuid']
+        job_id: str = schedule_response.json()[JOB_UUID_KEY]
         logger.info(f'Scheduled data version export job with job_id={job_id}')
         return job_id
 
@@ -52,16 +53,16 @@ class DVExport:
         curr_poll = 0
         export_id = ""
         while curr_poll < mx_num_polls:
-            status_response = self.client.get_data_version_export_job_status(str(job_id))
+            status_response = self.client.get_data_version_export_job_status(job_id)
             if not status_response:
                 raise Exception(f"Failed to get export job status for job_id={job_id} response={repr(status_response)}")
 
             status_response_json = status_response.json()
-            if status_response_json['failed']:
+            if status_response_json[EXPORT_JOB_FAILED_KEY]:
                 raise Exception(f"Data version export job_id={job_id} failed")
 
-            if status_response_json['completed']:
-                export_id = status_response_json['exportUuid']
+            if status_response_json[EXPORT_JOB_COMPLETED_KEY]:
+                export_id = status_response_json[EXPORT_UUID_KEY]
                 logger.info(f"Export job_id={job_id} completed with export_id={export_id}")
                 break
 
@@ -79,8 +80,7 @@ class DVExport:
     def get_export_metadata(self, export_id: str) -> dict[str, any]:
         metadata_response = self.client.get_data_version_export_metadata(export_id)
         if not metadata_response:
-            raise Exception(
-                f"Failed to get export metadata for export_id={export_id} response={repr(metadata_response)}")
+            raise Exception(f"Failed to get export metadata for export_id={export_id}")
         logger.info(f"Successfully retrieved metadata for export_id={export_id}")
         return metadata_response.json()
 
@@ -133,10 +133,10 @@ class DVExport:
                          metadata: dict[str, any],
                          data_store: DataStore,
                          base_download_dir: str):
-        tables = extract_tables(metadata['tables'])
-        export_id = metadata['uuid']
+        tables = extract_tables(metadata[TABLES_KEY])
+        export_id = metadata[UUID_KEY]
 
-        is_initial_export = len(metadata['tables']) == len(metadata['newTables'])
+        is_initial_export = len(metadata[TABLES_KEY]) == len(metadata[NEW_TABLES_KEY])
 
         if is_initial_export:
             logger.info(f"Performing an initial export")
@@ -153,12 +153,12 @@ class DVExport:
         else:
             logger.info(f"Performing delta export")
 
-            deleted_tables = metadata['deletedTables']
+            deleted_tables = metadata[DELETED_TABLES_KEY]
             for deleted_table in deleted_tables:
                 logger.info(f"Dropping table={deleted_table}")
                 data_store.drop_table(deleted_table)
 
-            new_tables = metadata['newTables']
+            new_tables = metadata[NEW_TABLES_KEY]
             new_table_infos = [tbl_info for tbl_info in tables if tbl_info.name in new_tables]
 
             itr = 1
