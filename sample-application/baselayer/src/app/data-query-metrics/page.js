@@ -54,7 +54,7 @@ export default function DataQuery() {
 
         const formattedData = {
           count: count.trim(),
-          visierTime: visierTime.trim().split(' - ')[0] // Extract the datetime without the ' - [0]' part
+          visierTime: visierTime.trim().split(' - ')[0] // Extract the datetime without ' - [0]'.
         };
 
         setExpenseReportsValue(formattedData);
@@ -86,7 +86,7 @@ export default function DataQuery() {
 
         const formattedData = {
           count: count.trim(),
-          visierTime: visierTime.trim().split(' - ')[0] // Extract the datetime without the ' - [0]' part
+          visierTime: visierTime.trim().split(' - ')[0] // Extract the datetime without ' - [0]'.
         };
 
         setExpenseReportsCount(formattedData);
@@ -125,7 +125,7 @@ export default function DataQuery() {
                 <td>{expenseReportsValue?.count}</td>
               </tr>
               <tr>
-                <td>Avg Value of Expense Report</td>
+                <td>Average Value of Expense Report</td>
                 <td>{expenseReportsValue?.count / expenseReportsCount?.count}</td>
               </tr>
             </tbody>
