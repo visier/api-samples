@@ -42,7 +42,7 @@ export default function Home() {
               <h2 style={{ "padding": "40px 20px 10px 20px" }}>Visier Baselayer Application</h2>
               <h4 style={{ "padding": "10px 20px 0 20px" }}>A sample application built on Alpine by Visier</h4>
               <p style={{ "padding": "20px" }}>
-                This is a sample Next.js application that shows calls to Visier's Data Model, Data Query, and Data Intake APIs. It utilizes Visier's OAuth 2.0 authentication flow.
+                This is a sample Next.js application that shows calls to Visier's Data Model, Data Query, and Direct Data Intake APIs. It utilizes Visier's OAuth 2.0 authentication flow.
                 For more information about configuring Visier access with OAuth 2.0, see the README.md. 
               </p>
             </Col>
@@ -82,7 +82,7 @@ export default function Home() {
             <Card.Body>
               <Card.Title>Visier Baselayer Application</Card.Title>
               <Card.Text>
-                This is a sample Next.js application that shows the three-legged (`authorization_code` grant type) OAuth authentication with calls to Visier's Data Model, Data Query, and Data Intake APIs.
+                This is a sample Next.js application that shows the three-legged (`authorization_code` grant type) OAuth authentication with calls to Visier's Data Model, Data Query, and Direct Data Intake APIs.
                 For more information about configuring Visier access with OAuth 2.0, see the README.md. 
               </Card.Text>
               <Alert key="warning" variant="warning">
