@@ -5,7 +5,7 @@ Baselayer is a Visier sample application that showcases:
 
 Baselayer is built with [React](https://react.dev/) and [Next.js](https://nextjs.org/). It consists of 4 smaller React components, each showcasing a Visier API. All React components live together in the main React app. The React components use Visier's [Data Model and Data Query API](https://docs.visier.com/developer/apis/data-model-query/data-model-query-api.htm). Next.js routes API calls through `pages/api/execute.js`, which utilizes `axios` to make API calls. Each API call routes through this workflow before returning the data. Each component sets up its own API call within the component itself.
 
-Baselayer also has a data intake widget to showcase Visier's [Data Intake API](https://docs.visier.com/developer/Tutorials/data-file-upload/upload-data-files-solution.htm). 
+Baselayer also has a data intake widget to showcase Visier's [Direct Data Intake API](https://docs.visier.com/developer/Tutorials/direct-data-intake/send-data-to-visier.htm).
 
 To use Baselayer, you must authenticate with OAuth 2.0 in Visier.
 
