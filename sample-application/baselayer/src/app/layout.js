@@ -18,8 +18,8 @@ import React from 'react';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-    title: 'Visier Sample app',
-    description: 'Public Visier sample application with OAuth and API calls',
+    title: 'Visier Sample Application',
+    description: 'Public Visier sample application with OAuth 2.0 and API calls',
 }
 
 export default function RootLayout({ children }) {
