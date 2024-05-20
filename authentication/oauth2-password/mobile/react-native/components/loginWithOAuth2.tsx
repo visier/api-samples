@@ -8,7 +8,7 @@ const apikey = "INSERT-YOUR-API-KEY";
 const vhost = "INSERT-YOUR-API-URL";
 const grantType = "password";
 
-const Login = ({ navigation }: { navigation: any }) => {
+const LoginWithOAuth2 = ({ navigation }: { navigation: any }) => {
   const [username, setUsername] = useState('EMAILADDRESS');
   const [password, setPassword] = useState('PASSWORD');
   const { accessToken, setAccessToken } = useContext(AuthContext);
@@ -76,7 +76,6 @@ const Login = ({ navigation }: { navigation: any }) => {
     
         const jwt = await authenticate(instance)
         setAccessToken(jwt.access_token); 
-        // const r = await sampleApiCall(instance)
         
         console.log(jwt)
         navigation.navigate('Dashboard');
@@ -126,4 +125,4 @@ const styles = StyleSheet.create({
   });
   
 
-export default Login;
+export default LoginWithOAuth2;

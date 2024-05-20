@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import axios from "axios";
+import { AuthContext } from '../contexts/authcontext';
 
 const apikey = "INSERT-YOUR-API-KEY";
 const vhost = "INSERT-YOUR-API-URL";
 const grantType = "urn:visier:params:oauth:grant-type:asid-token";
 
-function Login2() {
+function LoginWithVisierSecureToken() {
   const [username, setUsername] = useState('EMAILADDRESS');
   const [password, setPassword] = useState('PASSWORD');
+  const { accessToken, setAccessToken } = useContext(AuthContext);
 
   const authenticate = async (instance: any) => {
     const url = "/v1/admin/visierSecureToken"
@@ -66,11 +68,9 @@ function Login2() {
                 apikey: apikey
             }
         })
-
-    
-        const r = await authenticate(instance)
-        // const r = await sampleApiCall(instance)
-        console.log(r)
+        const jwt = await authenticate(instance)
+        setAccessToken(jwt.access_token); 
+        console.log(jwt)
     } catch (err) {
         console.error("Unable to call Visier API with password grant authentication. Details: " + err)
     }
@@ -117,4 +117,4 @@ const styles = StyleSheet.create({
   });
   
 
-export default Login2;
+export default LoginWithVisierSecureToken;

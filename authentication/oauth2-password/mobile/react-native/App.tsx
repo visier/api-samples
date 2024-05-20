@@ -24,7 +24,7 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
-import Login from './components/login';
+import LoginWithOAuth2 from './components/loginWithOAuth2';
 import CustomHeader from './components/header';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
@@ -50,7 +50,7 @@ function App(): React.JSX.Element {
     <AuthContext.Provider value={{ accessToken, setAccessToken }}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Login">
-          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="Login" component={LoginWithOAuth2} />
           <Stack.Screen name="Dashboard" component={Dashboard} />
         </Stack.Navigator>
       </NavigationContainer>
