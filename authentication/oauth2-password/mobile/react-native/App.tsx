@@ -1,8 +1,5 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+ * Sample React Native App using API from https://developer.visier.com/
  */
 
 import React, {useState} from 'react';
