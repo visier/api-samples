@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -26,15 +26,15 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 import LoginWithOAuth2 from './components/loginWithOAuth2';
 import CustomHeader from './components/header';
-import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer } from '@react-navigation/native';
+import {createStackNavigator} from '@react-navigation/stack';
+import {NavigationContainer} from '@react-navigation/native';
 import Dashboard from './components/dashboard';
-import { AuthContext } from './contexts/authcontext';
+import {AuthContext} from './contexts/authcontext';
+import LoginWithVisierSecureToken from './components/loginWithVisierSecureToken';
 
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
-
 
 const Stack = createStackNavigator();
 
@@ -47,20 +47,19 @@ function App(): React.JSX.Element {
   };
 
   return (
-    <AuthContext.Provider value={{ accessToken, setAccessToken }}>
+    <AuthContext.Provider value={{accessToken, setAccessToken}}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Login">
           <Stack.Screen name="Login" component={LoginWithOAuth2} />
+          {/* 
+          // Alternatively you can auth with VisierSecureToken instead if you use LoginWithVisierSecureToken
+          <Stack.Screen name="Login" component={LoginWithVisierSecureToken} /> 
+          */}
           <Stack.Screen name="Dashboard" component={Dashboard} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthContext.Provider>
   );
-
-
-
-
-  
 }
 
 const styles = StyleSheet.create({
