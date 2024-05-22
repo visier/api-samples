@@ -49,9 +49,9 @@ export default function DataModel() {
   return (
     <Card style={{ width: '100%' }} className="m-3">
       <Card.Body>
-        <Card.Title>Expense Reports Dimensions (Data Model API)</Card.Title>
+        <Card.Title>Expense Report Dimensions (Data Model API)</Card.Title>
         <Card.Text>
-          The response will return a list of all expense report dimensions.
+          The response returns a list of all expense report dimensions.
         </Card.Text>
         <Form>
           <Form.Group controlId="apiTransaction">

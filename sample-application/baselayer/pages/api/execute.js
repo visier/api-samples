@@ -9,7 +9,7 @@ export default async (req, res) => {
       const data = await POST(req);
       res.status(200).json(data.data);
     } catch (error) {
-      res.status(500).json({ error: error.toString() }); //Make sure your error is serializable or use error.message
+      res.status(500).json({ error: error.toString() }); // Make sure your error is serializable or use error.message
     }
   } else {
     // Handle any requests that aren't POST

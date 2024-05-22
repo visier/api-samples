@@ -84,10 +84,10 @@ export default function DataIntake() {
   return (
     <Card style={{ width: '100%' }} className="m-3">
       <Card.Body>
-        <Card.Title>Data Upload (Data Intake API)</Card.Title>
+        <Card.Title>Data Upload (Direct Data Intake API)</Card.Title>
         <Card.Text>
           Load data directly into Visier objects. These objects can be delivered as part of Visier Blueprint, locally modified objects, or even completely custom objects.
-          Please upload expense report data.
+          In this application, please upload expense report data.
         </Card.Text>
         <Form>
           <Form.Group controlId="apiTransaction">

@@ -39,21 +39,22 @@ export default function Home() {
         <Container>
           <Row className="mb-4">
             <Col className="mb-4" sm={6}>
-              <h2 style={{ "padding": "40px 20px 10px 20px" }}>Expense Report Baselayer Application</h2>
-              <h4 style={{ "padding": "10px 20px 0 20px" }}>A Sample Application built on Alpine by Visier</h4>
+              <h2 style={{ "padding": "40px 20px 10px 20px" }}>Visier Baselayer Application</h2>
+              <h4 style={{ "padding": "10px 20px 0 20px" }}>A sample application built on Alpine by Visier</h4>
               <p style={{ "padding": "20px" }}>
-                This is a sample Next.js application that shows calls to our Data Model, Data Query and Data Intake APIs. It utilizes our OAuth-API flow for authentication.
-                Please consult the README.md file for how to configure the Visier access using OAuth 2.0.
+                This is a sample Next.js application that shows calls to Visier's Data Model, Data Query, and Direct Data Intake APIs. It utilizes Visier's OAuth 2.0 authentication flow.
+                For more information about configuring Visier access with OAuth 2.0, see the README.md. 
               </p>
             </Col>
             <Col sm={6}>
-              <h2 style={{ "padding": "40px 20px 10px 20px" }}>Pre-requisites and Resources</h2>
+              <h2 style={{ "padding": "40px 20px 10px 20px" }}>Prerequisites</h2>
               <p style={{ "padding": "20px" }}>
-                There are some pre-requisites you need to do before you can get this application API calls working:
+                Before calling this application's APIs, you need:
                 <ul>
-                  <li> A Visier tenant. If you don't already have a Visier tenant, join the <a href="https://www.visier.com/platform/advance-access-program/">Alpine Advance Access Program,</a> or sign up for our <a href="https://www.visier.com/sandbox/">Visier free trial.</a></li>
-                  <li><a href="https://docs.visier.com/developer/Studio/sign-in%20settings/oauth2.htm">OAuth 2.0</a> capabilities in your Visier tenant, along with the client ID and API key.</li>
-                  <li> Finished setting up Expense Reports in the <a href="https://docs.visier.com/developer/Tutorials/analytic-model/extend-analytic-model-subject.htm">Extend the Analytic Model: Create a Subject</a> tutorial.</li>
+                  <li>A Visier tenant. If you don't already have a Visier tenant, sign up for the <a href="https://www.visier.com/sandbox/">Visier free trial</a>.</li>
+                  <li>A registered <a href="https://docs.visier.com/developer/Studio/sign-in%20settings/oauth2.htm">OAuth 2.0</a> client in Visier.</li>
+                  <li>A Visier <a href="https://docs.visier.com/developer/Studio/solution%20settings/api-key-generate.htm">API key</a>.</li>
+                  <li><a href="https://docs.visier.com/developer/Tutorials/analytic-model/extend-analytic-model-subject.htm">Expense Report objects and loaded data</a> in Visier.</li>
                 </ul>
               </p>
             </Col>
@@ -79,13 +80,13 @@ export default function Home() {
         <>
           <Card style={{ width: '40rem' }}>
             <Card.Body>
-              <Card.Title>Visier Application Baselayer</Card.Title>
+              <Card.Title>Visier Baselayer Application</Card.Title>
               <Card.Text>
-                This is a sample Next.js application that shows the three-legged (authorization_code flow) OAuth authentication with calls to our Data Model, Data Query and Data Intake APIs.
-                Please consult the README.md file for how to configure the Visier access using OAuth 2.0.
+                This is a sample Next.js application that shows the three-legged (`authorization_code` grant type) OAuth authentication with calls to Visier's Data Model, Data Query, and Direct Data Intake APIs.
+                For more information about configuring Visier access with OAuth 2.0, see the README.md. 
               </Card.Text>
               <Alert key="warning" variant="warning">
-                <b>Note:</b> This is a sample application intended to showcase Visier Alpine APIs and Oauth functionality. For information about acceptable use, see the LICENSE file.
+                <b>Note:</b> This sample application shows Visier's public APIs and OAuth 2.0 functionality. For information about acceptable use, see the LICENSE file.
               </Alert>
               <Button variant="primary" onClick={() => router.push("/oauth2/login")}>Login to Visier</Button>
             </Card.Body>
