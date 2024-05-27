@@ -86,12 +86,6 @@
         }
       }
     ],
-    "timeInterval": {
-      "fromInstant": "0",
-      "intervalPeriodType": "MONTH",
-      "intervalPeriodCount": 1000,
-      "direction": "FORWARD"
-    },
     "options": {
       "recordMode": "CHANGES"
     }

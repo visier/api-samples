@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class DVChangesFetcher:
     def __init__(self, session: VisierSession,
-                 poll_interval_secs: int = 30,
+                 poll_interval_secs: int = 10,
                  export_job_timeout_sec: int = 1200):
         self.dv_client = DVExportApiClient(session, raise_on_error=True)
         self.poll_interval_secs = poll_interval_secs
@@ -34,7 +34,7 @@ class DVChangesFetcher:
         schedule_response = self.dv_client.schedule_delta_data_version_export_job(end_data_version,
                                                                                   base_data_version).json()
         job_id = schedule_response['jobUuid']
-        logger.info(f"DV export job {job_id} was scheduled.")
+        logger.info(f"DV export job {job_id} was scheduled, base dv {base_data_version}, dv {end_data_version}.")
 
         start_time = time.time()
         while True:
