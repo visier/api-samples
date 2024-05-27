@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
-    # noinspection DuplicatedCode
-    parser = argparse.ArgumentParser(description='DV Export API example script.')
+    logger.info("Parsing command line arguments.")
+    parser = argparse.ArgumentParser(description='DV Query History sample.')
     parser.add_argument('-d', '--data_version', type=int,
                         help='Data Version number the script should export.', required=False)
     parser.add_argument('-b', '--base_data_version', type=int,
@@ -24,17 +24,20 @@ def parse_args() -> argparse.Namespace:
                              'If provided, a DV export job will not be scheduled.')
     parsed_args = parser.parse_args()
     if parsed_args.data_version is None and parsed_args.export_uuid is None:
-        raise Exception(f"At least one of data_version or export_uuid must be provided")
+        raise Exception("At least one of data_version or export_uuid must be provided")
+    logger.info("Arguments parsed successfully: %s", parsed_args)
     return parsed_args
 
 
 if __name__ == "__main__":
+    logger.info("Script started.")
     args = parse_args()
     with open("settings.json", 'r') as query_file:
         settings = json.load(query_file)
 
     subject = settings['query']['source']['analyticObject']
     filter_property = settings['query']['filters'][0]['memberSet']['values']['included'].strip('${}')
+    logger.info("Settings loaded successfully.")
 
     auth = make_auth(env_values=settings['server'])
     with VisierSession(auth) as session:
@@ -45,10 +48,16 @@ if __name__ == "__main__":
             export_uuid=args.export_uuid,
             subject_name=subject,
             property_name=filter_property)
+        logger.info("Fetched subject property changes successfully.")
 
-        # remove duplicates
+        # cleaning filter duplicates
         filter_values = set(property_values)
         history_fetcher = HistoryFetcher(session)
-        history_table = history_fetcher.query_changes(settings['query'], filter_values)
+
+        history_table = history_fetcher.list_changes(settings['query'], filter_values)
+
         data_store = DataStore(settings['db_url'])
         data_store.save_to_db(history_table, subject)
+        logger.info("Data saved to database successfully.")
+
+    logger.info("Script completed.")

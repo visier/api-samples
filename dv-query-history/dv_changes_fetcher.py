@@ -1,6 +1,7 @@
 import io
 import logging
 import time
+from typing import List
 
 import pandas as pd
 from visier.api import DVExportApiClient
@@ -22,19 +23,18 @@ class DVChangesFetcher:
                                        data_version: int,
                                        export_uuid: str,
                                        subject_name: str,
-                                       property_name: str) -> [str]:
+                                       property_name: str) -> List[str]:
         """Retrieve changes for a subject property between two data versions."""
+        logger.info(f"Fetching changes for {subject_name}.{property_name}.")
         if export_uuid is None:
             export_uuid = self.__run_export_job(base_data_version, data_version)
         return self.__read_subject_property(export_uuid, subject_name, property_name)
 
     def __run_export_job(self, base_data_version: int, end_data_version: int) -> str:
-        """Schedule a data version export job and wait for it to complete."""
-
         schedule_response = self.dv_client.schedule_delta_data_version_export_job(end_data_version,
                                                                                   base_data_version).json()
         job_id = schedule_response['jobUuid']
-        logger.info(f"DV export scheduled job {job_id}")
+        logger.info(f"DV export job {job_id} was scheduled.")
 
         start_time = time.time()
         while True:
@@ -50,12 +50,12 @@ class DVChangesFetcher:
                     raise TimeoutError(f"Job {job_id} timed out after {self.export_job_timeout_sec} seconds.")
                 time.sleep(self.poll_interval_secs)
 
-    def __read_subject_property(self, export_uuid: str, subject_name: str, property_name: str) -> [str]:
-        """Read property from data version file."""
-
+    def __read_subject_property(self, export_uuid: str, subject_name: str, property_name: str) -> List[str]:
         metadata_response = self.dv_client.get_data_version_export_metadata(export_uuid).json()
         table = list(filter(lambda x: x['name'] == subject_name, metadata_response['tables']))
-        table_id = table[0]['commonColumns']['files'][0]['fileId']
-        get_file_response = self.dv_client.get_export_file(export_uuid, table_id)
+        file_id = table[0]['commonColumns']['files'][0]['fileId']
+
+        logger.info(f"Get exportUuid {export_uuid} fileId {file_id}.")
+        get_file_response = self.dv_client.get_export_file(export_uuid, file_id)
         df = pd.read_csv(io.StringIO(get_file_response.content.decode('utf-8')))
         return df[property_name].tolist()
