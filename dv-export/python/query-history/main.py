@@ -8,8 +8,17 @@ from data_store import DataStore
 from dv_changes_fetcher import DVChangesFetcher
 from history_fetcher import HistoryFetcher
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    filename='app.log',
+    filemode='w',
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+logger = logging.getLogger()
+logger.addHandler(console_handler)
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,7 +62,6 @@ if __name__ == "__main__":
         # cleaning filter duplicates
         filter_values = set(property_values)
         history_fetcher = HistoryFetcher(session)
-
         history_table = history_fetcher.list_changes(settings['query'], filter_values)
 
         data_store = DataStore(settings['db_url'])

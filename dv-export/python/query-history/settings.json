@@ -87,7 +87,8 @@
       }
     ],
     "options": {
-      "recordMode": "CHANGES"
+      "recordMode": "CHANGES",
+      "page": 0
     }
   }
 }
