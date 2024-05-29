@@ -78,17 +78,12 @@ class SQLAlchemyDataStore(DataStore):
             name = column_info.name
             sql_data_type = self.get_data_store_data_type_from_dv_export_data_type(column_info.data_type)
 
-            if column_info.name == LOCATION_LEVEL_COLUMN_NAME:
-                nullable = True
-            else:
-                nullable = column_info.allows_null
-
             columns.append(
                 Column(
                     name,
                     sql_data_type,
                     primary_key=column_info.primary_key,
-                    nullable=nullable
+                    nullable=column_info.allows_null
                 )
             )
         return columns

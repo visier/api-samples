@@ -12,7 +12,6 @@ EXPORT_JOB_FAILED_KEY = 'failed'
 EXPORT_JOB_COMPLETED_KEY = 'completed'
 
 # Export metadata related constants
-LOCATION_LEVEL_COLUMN_NAME = 'Location_LEVEL'
 DIFF_ACTION_COLUMN_NAME = '_DiffAction_'
 DIFF_ACTION_INSERT = '+'
 UUID_KEY = 'uuid'
