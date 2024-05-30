@@ -18,13 +18,11 @@ class HistoryFetcher:
 
     def list_changes(self, query: Dict[str, Any], filters_values: Set[str]) -> []:
         """Query list changes for subject using filters_values."""
-        logger.info(f"List changes for {query['source']}.")
+        logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
 
+        # Update query with time interval and filter values
         query['timeInterval'] = self.__get_time_interval(query)
-
-        # TODO update all filters, not only one
-        query_filter = query['filters'][0]
-        query_filter['memberSet']['values']['included'] = [
+        query['filters'][0]['memberSet']['values']['included'] = [
             {"path": [filter_value]} for filter_value in filters_values
         ]
 
@@ -35,6 +33,7 @@ class HistoryFetcher:
         else:
             limit = int(limit)
 
+        # Fetching using pagination
         page_num = 0
         all_rows = []
         while True:
@@ -46,6 +45,7 @@ class HistoryFetcher:
                 break
             page_num += 1
 
+        logger.info(f"History for {query['source']} fetched rows: {len(all_rows)}.")
         return all_rows
 
     def __get_time_interval(self, query: Dict[str, Any]) -> Dict[str, Any]:

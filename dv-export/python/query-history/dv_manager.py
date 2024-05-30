@@ -18,9 +18,11 @@ class DVManager:
         self.job_timeout_sec = job_timeout_sec
 
     def get_data_versions(self):
+        """Get the list of data versions available for export."""
         return self.dv_client.get_data_versions_available_for_export().json()['dataVersions']
 
     def get_table_metadata(self, export_uuid: str, table_name: str) -> dict[str, any]:
+        """Get the metadata for a table in a DV export."""
         metadata_response = self.dv_client.get_data_version_export_metadata(export_uuid).json()
         table = next((x for x in metadata_response['tables'] if x['name'] == table_name), None)
         if table is None:
@@ -61,4 +63,5 @@ class DVManager:
                                      chunksize=chunk_size):
                 all_values.extend(chunk[property_name])
 
+        logger.info(f"Fetched {len(all_values)} records with property {property_name}.")
         return all_values
