@@ -1,0 +1,58 @@
+{
+  "source": {
+    "analyticObject": "Productivity"
+  },
+  "columns": [
+    {
+      "columnName": "EmployeeID",
+      "columnDefinition": {
+        "property": {
+          "name": "Productivity.EmployeeID",
+          "qualifyingPath": "Productivity"
+        }
+      }
+    },
+    {
+      "columnName": "Fully_Productive",
+      "columnDefinition": {
+        "property": {
+          "name": "Productivity.Fully_Productive",
+          "qualifyingPath": "Productivity"
+        }
+      }
+    },
+    {
+      "columnName": "Days_To_Productivity",
+      "columnDefinition": {
+        "property": {
+          "name": "Productivity.Days_To_Productivity",
+          "qualifyingPath": "Productivity"
+        }
+      }
+    }
+  ],
+  "sortOptions": [
+    {
+      "columnIndex": 1,
+      "sortDirection": "SORT_ASCENDING"
+    }
+  ],
+  "filters": [
+    {
+      "memberSet": {
+        "dimension": {
+          "name": "EmployeeID_Hierarchy",
+          "qualifyingPath": "Productivity.Employee"
+        },
+        "values": {
+          "included": "${{EmployeeID}}"
+        }
+      }
+    }
+  ],
+  "options": {
+    "recordMode": "CHANGES",
+    "limit": 10000,
+    "page": 0
+  }
+}

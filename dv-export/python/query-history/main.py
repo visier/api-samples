@@ -70,13 +70,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_config() -> Dict[str, Any]:
-    logger.info("Loading configuration from .env files.")
     config = {
         **dotenv_values('.env.query-history'),
         **dotenv_values('.env.visier-auth'),
         **dotenv_values('.env')
     }
-    logger.info("Configuration loaded successfully.")
+    logger.info("Configuration was loaded.")
     return config
 
 
@@ -99,8 +98,10 @@ def main() -> None:
     auth = make_auth(env_values=OrderedDict(config))
     with VisierSession(auth) as session:
         dv_manager = DVManager(session,
-                               job_status_poll_interval_sec=config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS],
-                               job_timeout_sec=config[DV_JOB_TIMEOUT_SECONDS])
+                               bool(config[DV_SAVE_EXPORT_FILES_ON_DISK]),
+                               config[DV_EXPORT_FILES_PATH],
+                               job_status_poll_interval_sec=int(config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS]),
+                               job_timeout_sec=int(config[DV_JOB_TIMEOUT_SECONDS]))
 
         # List available data versions for export
         if args.list_dv:
@@ -117,6 +118,7 @@ def main() -> None:
         # Load query from file
         with open(args.query_path, 'r') as query_file:
             query = json.load(query_file)
+
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
         filter_property = get_filter_property(query)
 
