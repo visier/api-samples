@@ -1,10 +1,9 @@
 import logging
 import os
-from typing import List, Dict, Any
 
-from sqlalchemy import create_engine, Column, String, Table, MetaData, inspect
+from sqlalchemy import String, Float, Integer, BigInteger, Boolean, insert
+from sqlalchemy import create_engine, Column, Table, MetaData
 from sqlalchemy.orm import sessionmaker
-from visier.connector import ResultTable
 
 logger = logging.getLogger(__name__)
 
@@ -22,36 +21,48 @@ class DataStore:
         self.engine = create_engine(db_url, echo=echo)
         self.metadata = MetaData()
         self.metadata.reflect(self.engine)
+        self.session_make = sessionmaker(bind=self.engine)
 
-    def save_to_db(self, result_table: ResultTable, table_name: str, batch_size: int = 1000) -> None:
-        session_maker = sessionmaker(bind=self.engine)
-        logger.info(f"Saving result table into {table_name}.")
-        with session_maker() as session:
-            # Drop the table if it exists
-            inspector = inspect(self.engine)
-            if inspector.has_table(table_name):
-                logger.info(f"Deleting existing table {table_name}.")
-                table = Table(table_name, self.metadata, autoload_with=self.engine)
-                table.drop(self.engine)
-                self.metadata.remove(table)  # Ensure the table is removed from self.metadata
+    def drop_table(self, table_name):
+        """Deletes a table from the database if exists."""
+        table = self.metadata.tables.get(table_name, None)
+        if table is not None:
+            table.drop(self.engine, checkfirst=True)
+            self.metadata.remove(table)
 
-            # Define the table
-            columns = [Column(col_name, String) for col_name in result_table.header]
-            table = Table(table_name, self.metadata, *columns)
-            self.metadata.create_all(self.engine)
+    # TODO make subject and table as separate parameter
+    def create_table(self, subject, query_columns: dict, table_columns: dict):
+        visier_to_sql_types = {
+            'String': String,
+            'Date': BigInteger,
+            'Number': Float,
+            'Integer': Integer,
+            'Boolean': Boolean
+        }
+        columns = []
+        for query_column in query_columns:
+            for table_column in table_columns:
+                query_column_name = query_column['columnDefinition']['property']['name'][len(subject) + 1:]
+                if query_column_name == table_column['name']:
+                    column = Column(query_column['columnName'], visier_to_sql_types[table_column['dataType']])
+                    columns.append(column)
 
-            # Insert data using bulk insert in batches
-            rows: List[Dict[str, Any]] = []
-            for row in result_table.rows():
-                rows.append(dict(zip(result_table.header, row)))
-                if len(rows) >= batch_size:
-                    session.execute(table.insert(), rows)
-                    rows = []
+        Table(subject, self.metadata, *columns)
+        self.metadata.create_all(self.engine)
 
-            # Insert remaining rows
-            if rows:
-                session.execute(table.insert(), rows)
+    def save_to_db(self, table_name: str, rows: list[list], chunk_size=1000):
+        session = self.session_make()
+        table = self.metadata.tables[table_name]
+        insert_stmt = insert(table)
 
-            # Commit the session
-            session.commit()
-            logger.info(f"Result table was saved into {table_name}.")
+        # Convert the list of rows into a list of dictionaries
+        columns = table.columns.keys()
+        data = [dict(zip(columns, row)) for row in rows]
+
+        # Insert data in chunks
+        for i in range(0, len(data), chunk_size):
+            chunk = data[i:i + chunk_size]
+            session.execute(insert_stmt, chunk)
+
+        session.commit()
+        session.close()

@@ -16,7 +16,7 @@ The application performs the following operations:
 
 ## Usage
 
-The application is configured through command-line arguments and a `settings.json` file.
+The application is configured through command-line arguments and a `.env` files.
 
 Command-line arguments are parsed in `main.py` using the `argparse` library. The arguments include:
 
@@ -24,22 +24,4 @@ Command-line arguments are parsed in `main.py` using the `argparse` library. The
 - `-b` or `--base_data_version`: The base data version number to compute a diff from.
 - `-e` or `--export_uuid`: An optional export UUID to retrieve export metadata for. If provided, a DV export job will not be scheduled.
 
-The `settings.json` file includes parameters such as the server settings, database URL, and the query to fetch data. Here is a sample `settings.json` file:
-
-```json
-{
-  "server": {
-    "VISIER_HOST": "http://d3m.localdev.local:8000",
-    "VISIER_APIKEY": "",
-    "VISIER_USERNAME": "ceo@d3m.com",
-    "VISIER_PASSWORD": "",
-    "VISIER_VANITY": "d3m"
-  },
-  "db_url": "sqlite:///data/history.db",
-  "query": {
-    "source": {
-      "analyticObject": "Employee"
-    },
-    // ... rest of the query
-  }
-}
+#TODO add information about query

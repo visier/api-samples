@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Dict, Any, Set
 
 from visier.api import ModelApiClient, QueryApiClient
-from visier.connector import VisierSession, ResultTable
+from visier.connector import VisierSession
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +16,37 @@ class HistoryFetcher:
         self.model_client = ModelApiClient(session, raise_on_error=True)
         self.query_client = QueryApiClient(session, raise_on_error=True)
 
-    def list_changes(self, query: Dict[str, Any], filters_values: Set[str]) -> ResultTable:
+    def list_changes(self, query: Dict[str, Any], filters_values: Set[str]) -> []:
         """Query list changes for subject using filters_values."""
         logger.info(f"List changes for {query['source']}.")
 
         query['timeInterval'] = self.__get_time_interval(query)
-        # updating filter with values
+
+        # TODO update all filters, not only one
         query_filter = query['filters'][0]
         query_filter['memberSet']['values']['included'] = [
             {"path": [filter_value]} for filter_value in filters_values
         ]
 
-        result_table = self.query_client.list(query)
-        return result_table
+        limit = query['options']['limit']
+        if limit is None:
+            limit = 1000
+            query['options']['limit'] = limit
+        else:
+            limit = int(limit)
+
+        page_num = 0
+        all_rows = []
+        while True:
+            query['options']['page'] = page_num
+            result_table = self.query_client.list(query)
+            rows = list(result_table.rows())
+            all_rows.extend(rows)
+            if len(rows) < limit:
+                break
+            page_num += 1
+
+        return all_rows
 
     def __get_time_interval(self, query: Dict[str, Any]) -> Dict[str, Any]:
         analytic_object_name = query['source']['analyticObject']
