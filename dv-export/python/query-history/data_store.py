@@ -35,7 +35,7 @@ class DataStore:
 
     def drop_table_if_exists(self, table_name: str) -> None:
         """Drops a table from the database if exists."""
-        table: Table = self.metadata.tables.get(table_name, None)
+        table = self.metadata.tables.get(table_name)
         if table is not None:
             table.drop(self.engine, checkfirst=True)
             self.metadata.remove(table)

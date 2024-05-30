@@ -102,30 +102,35 @@ def main() -> None:
                                job_status_poll_interval_sec=config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS],
                                job_timeout_sec=config[DV_JOB_TIMEOUT_SECONDS])
 
+        # List available data versions for export
         if args.list_dv:
             data_versions = dv_manager.get_data_versions()
             logger.info(f"Data versions fetched successfully:\n {json.dumps(data_versions, indent=2)}")
             return
 
-        with open(args.query_path, 'r') as query_file:
-            query = json.load(query_file)
-
-        analytic_object = query[SOURCE][ANALYTIC_OBJECT]
-        filter_property = get_filter_property(query)
-
+        # Execute export job if export UUID is not provided
         if args.export_uuid is None:
             export_uuid = dv_manager.execute_export_job(args.base_data_version, args.data_version)
         else:
             export_uuid = args.export_uuid
 
+        # Load query from file
+        with open(args.query_path, 'r') as query_file:
+            query = json.load(query_file)
+        analytic_object = query[SOURCE][ANALYTIC_OBJECT]
+        filter_property = get_filter_property(query)
+
+        # Get filter values from export files
         table_metadata = dv_manager.get_table_metadata(export_uuid, analytic_object)
         file_infos = table_metadata[COMMON_COLUMNS][FILES]
         property_values = dv_manager.read_property_values(export_uuid, file_infos, filter_property)
 
+        # Fetch analytic object history for each filter value
         filter_values = set(property_values)
         history_fetcher = HistoryFetcher(session)
         history_rows = history_fetcher.list_changes(query, filter_values)
 
+        # Save history to database
         data_store = DataStore(config[DB_URL])
         data_store.drop_table_if_exists(analytic_object)
         data_store.create_table(analytic_object, query[COLUMNS], table_metadata[COMMON_COLUMNS][COLUMNS])

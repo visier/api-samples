@@ -13,12 +13,13 @@ logger = logging.getLogger(__name__)
 
 class HistoryFetcher:
     """Fetches values for all history of subject."""
+    DEFAULT_QUERY_LIMIT = 1000
 
     def __init__(self, session: VisierSession):
         self.model_client = ModelApiClient(session, raise_on_error=True)
         self.query_client = QueryApiClient(session, raise_on_error=True)
 
-    def list_changes(self, query: Dict[str, Any], filters_values: Set[str]) -> []:
+    def list_changes(self, query: Dict[str, Any], filters_values: Set[str]) -> list[list[str]]:
         """Query list changes for subject using filters_values."""
         logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
 
@@ -30,7 +31,7 @@ class HistoryFetcher:
 
         limit = query[OPTIONS][LIMIT]
         if limit is None:
-            limit = 1000
+            limit = self.DEFAULT_QUERY_LIMIT
             query[OPTIONS][LIMIT] = limit
         else:
             limit = int(limit)
