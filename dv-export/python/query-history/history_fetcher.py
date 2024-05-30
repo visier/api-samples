@@ -6,6 +6,8 @@ from typing import Dict, Any, Set
 from visier.api import ModelApiClient, QueryApiClient
 from visier.connector import VisierSession
 
+from constants import *
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,15 +23,15 @@ class HistoryFetcher:
         logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
 
         # Update query with time interval and filter values
-        query['timeInterval'] = self.__get_time_interval(query)
-        query['filters'][0]['memberSet']['values']['included'] = [
-            {"path": [filter_value]} for filter_value in filters_values
+        query[TIME_INTERVAL] = self.__get_time_interval(query)
+        query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
+            {PATH: [filter_value]} for filter_value in filters_values
         ]
 
-        limit = query['options']['limit']
+        limit = query[OPTIONS][LIMIT]
         if limit is None:
             limit = 1000
-            query['options']['limit'] = limit
+            query[OPTIONS][LIMIT] = limit
         else:
             limit = int(limit)
 
@@ -37,7 +39,7 @@ class HistoryFetcher:
         page_num = 0
         all_rows = []
         while True:
-            query['options']['page'] = page_num
+            query[OPTIONS][PAGE] = page_num
             result_table = self.query_client.list(query)
             rows = list(result_table.rows())
             all_rows.extend(rows)
@@ -45,21 +47,21 @@ class HistoryFetcher:
                 break
             page_num += 1
 
-        logger.info(f"History for {query['source']} fetched rows: {len(all_rows)}.")
+        logger.info(f"History for {query[SOURCE]} fetched rows: {len(all_rows)}.")
         return all_rows
 
     def __get_time_interval(self, query: Dict[str, Any]) -> Dict[str, Any]:
-        analytic_object_name = query['source']['analyticObject']
+        analytic_object_name = query[SOURCE][ANALYTIC_OBJECT]
         analytic_object_response = self.model_client.get_analytic_objects([analytic_object_name])
-        analytic_object = json.loads(analytic_object_response.text)['analyticObjects'][0]
-        data_start_date = int(analytic_object['dataStartDate'])
+        analytic_object = json.loads(analytic_object_response.text)[ANALYTIC_OBJECTS][0]
+        data_start_date = int(analytic_object[DATA_START_DATE])
 
         start_date = datetime.utcfromtimestamp(data_start_date / 1000)
         current_date = datetime.utcnow()
         diff_days = (current_date - start_date).days
         return {
-            "fromInstant": data_start_date,
-            "intervalPeriodType": "DAY",
-            "intervalPeriodCount": diff_days,
-            "direction": "FORWARD"
+            FROM_INSTANT: data_start_date,
+            INTERVAL_PERIOD_TYPE: PERIOD_TYPE_DAY,
+            INTERVAL_PERIOD_COUNT: diff_days,
+            DIRECTION: FORWARD
         }

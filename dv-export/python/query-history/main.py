@@ -7,6 +7,7 @@ from typing import Any, Dict
 from dotenv import dotenv_values
 from visier.connector import make_auth, VisierSession
 
+from constants import *
 from data_store import DataStore
 from dv_manager import DVManager
 from history_fetcher import HistoryFetcher
@@ -36,17 +37,17 @@ def parse_args() -> argparse.Namespace:
     logger.info("Parsing command line arguments.")
     parser = argparse.ArgumentParser(description='DV Query History sample.')
     parser.add_argument('-q', '--query_path', type=str, required=False,
-                        help='Filepath to query template.')
+                        help="Filepath to query template.")
     parser.add_argument('-d', '--data_version', type=int, required=False,
-                        help='Data Version number the script should export.')
+                        help="Data Version number the script should export.")
     parser.add_argument('-b', '--base_data_version', type=int, required=False,
-                        help='Base Data Version number to compute a diff from.')
+                        help="Base Data Version number to compute a diff from.")
     parser.add_argument('-e', '--export_uuid', type=str,
-                        help='Optional export UUID to retrieve export metadata for. '
-                             'If provided, a DV export job will not be scheduled.',
+                        help="Optional export UUID to retrieve export metadata for. "
+                             "If provided, a DV export job will not be scheduled.",
                         required=False)
     parser.add_argument('-l', '--list_dv', action='store_true', required=False,
-                        help='If provided, will show list of available data versions.')
+                        help="If provided, will show list of available data versions.")
 
     parsed_args = parser.parse_args()
     logger.info("Arguments parsed. %s", ", ".join(f"{arg}: {value}" for arg, value in vars(parsed_args).items()))
@@ -80,10 +81,10 @@ def load_config() -> Dict[str, Any]:
 
 
 def get_filter_property(query):
-    filters = query.get('filters', [{}])
-    member_set = filters[0].get('memberSet', {})
-    values = member_set.get('values', {})
-    included = values.get('included')
+    filters = query.get(FILTERS, [{}])
+    member_set = filters[0].get(MEMBER_SET, {})
+    values = member_set.get(VALUES, {})
+    included = values.get(INCLUDED)
 
     if included is None or not included.startswith('${{') or not included.endswith('}}'):
         raise Exception('Query filter should have format: '
@@ -98,8 +99,8 @@ def main() -> None:
     auth = make_auth(env_values=OrderedDict(config))
     with VisierSession(auth) as session:
         dv_manager = DVManager(session,
-                               job_status_poll_interval_sec=config['DV_JOB_STATUS_POLL_INTERVAL_SECONDS'],
-                               job_timeout_sec=config['DV_JOB_TIMEOUT_SECONDS'])
+                               job_status_poll_interval_sec=config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS],
+                               job_timeout_sec=config[DV_JOB_TIMEOUT_SECONDS])
 
         if args.list_dv:
             data_versions = dv_manager.get_data_versions()
@@ -109,7 +110,7 @@ def main() -> None:
         with open(args.query_path, 'r') as query_file:
             query = json.load(query_file)
 
-        analytic_object = query['source']['analyticObject']
+        analytic_object = query[SOURCE][ANALYTIC_OBJECT]
         filter_property = get_filter_property(query)
 
         if args.export_uuid is None:
@@ -118,16 +119,16 @@ def main() -> None:
             export_uuid = args.export_uuid
 
         table_metadata = dv_manager.get_table_metadata(export_uuid, analytic_object)
-        file_infos = table_metadata['commonColumns']['files']
+        file_infos = table_metadata[COMMON_COLUMNS][FILES]
         property_values = dv_manager.read_property_values(export_uuid, file_infos, filter_property)
 
         filter_values = set(property_values)
         history_fetcher = HistoryFetcher(session)
         history_rows = history_fetcher.list_changes(query, filter_values)
 
-        data_store = DataStore(config['DB_URL'])
+        data_store = DataStore(config[DB_URL])
         data_store.drop_table_if_exists(analytic_object)
-        data_store.create_table(analytic_object, query['columns'], table_metadata['commonColumns']['columns'])
+        data_store.create_table(analytic_object, query[COLUMNS], table_metadata[COMMON_COLUMNS][COLUMNS])
         data_store.save_to_db(analytic_object, history_rows)
 
 
