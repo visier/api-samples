@@ -3,6 +3,7 @@ import os
 
 from sqlalchemy import String, Float, Integer, BigInteger, Boolean, insert, create_engine, Column, Table, MetaData
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy_utils import database_exists, create_database
 
 from constants import *
 
@@ -16,6 +17,7 @@ class DataStore:
         'String': String,
         'Date': BigInteger,
         'Number': Float,
+        'Number_No_Suffix': Float,
         'Integer': Integer,
         'Boolean': Boolean
     }
@@ -27,6 +29,10 @@ class DataStore:
             db_path = db_url[len(self.SQLITE_PREFIX):]
             db_dir = os.path.dirname(db_path)
             os.makedirs(db_dir, exist_ok=True)
+
+        # Create the database if it does not exist
+        if not database_exists(db_url):
+            create_database(db_url)
 
         self.engine = create_engine(db_url, echo=echo)
         self.metadata = MetaData()
@@ -52,6 +58,27 @@ class DataStore:
                 if query_column_name == table_column[NAME]:
                     column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[table_column[DATA_TYPE]])
                     columns.append(column)
+
+        Table(analytic_object, self.metadata, *columns)
+        self.metadata.create_all(self.engine)
+        logger.info(f"Created table {analytic_object}.")
+
+    def create_table_(self, analytic_object: str, query_columns: dict, properties: list[dict[str, any]]) -> None:
+        """Creates a table in the database based on the query and table columns."""
+        properties_dict = {prop[ID]: prop for prop in properties}
+        columns = []
+        for query_column in query_columns:
+            property = properties_dict.get(query_column[COLUMN_DEFINITION][PROPERTY][NAME])
+            if property is None:
+                logger.warning(f"Property not found for column {query_column}.")
+                continue
+            column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[property[DATA_TYPE]])
+            columns.append(column)
+            # for table_column in table_columns:
+            #     query_column_name = query_column[COLUMN_DEFINITION][PROPERTY][NAME][len(analytic_object) + 1:]
+            #     if query_column_name == table_column[NAME]:
+            #         column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[table_column[DATA_TYPE]])
+            #         columns.append(column)
 
         Table(analytic_object, self.metadata, *columns)
         self.metadata.create_all(self.engine)

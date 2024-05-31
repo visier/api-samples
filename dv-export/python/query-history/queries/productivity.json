@@ -13,6 +13,15 @@
       }
     },
     {
+      "columnName": "EventDate",
+      "columnDefinition": {
+        "property": {
+          "name": "Productivity.EventDate",
+          "qualifyingPath": "Productivity"
+        }
+      }
+    },
+    {
       "columnName": "Fully_Productive",
       "columnDefinition": {
         "property": {
@@ -37,22 +46,9 @@
       "sortDirection": "SORT_ASCENDING"
     }
   ],
-  "filters": [
-    {
-      "memberSet": {
-        "dimension": {
-          "name": "EmployeeID_Hierarchy",
-          "qualifyingPath": "Productivity.Employee"
-        },
-        "values": {
-          "included": "${{EmployeeID}}"
-        }
-      }
-    }
-  ],
+
   "options": {
     "recordMode": "CHANGES",
-    "limit": 10000,
-    "page": 0
+    "limit": 10000
   }
 }

@@ -2,7 +2,6 @@ import argparse
 import json
 import logging
 from collections import OrderedDict
-from typing import Any, Dict
 
 from dotenv import dotenv_values
 from visier.connector import make_auth, VisierSession
@@ -69,7 +68,7 @@ def parse_args() -> argparse.Namespace:
     return parsed_args
 
 
-def load_config() -> Dict[str, Any]:
+def load_config() -> dict[str, any]:
     config = {
         **dotenv_values('.env.query-history'),
         **dotenv_values('.env.visier-auth'),
@@ -86,9 +85,11 @@ def get_filter_property(query):
     included = values.get(INCLUDED)
 
     if included is None or not included.startswith('${{') or not included.endswith('}}'):
-        raise Exception('Query filter should have format: '
-                        '"filters": [{"memberSet": {"values": {"included": "${{Property}}"}}}]')
-    return included[3:-2]
+        logger.warning("Filter property not found in query. History will be fetched without filters.")
+        return None
+    filter_property = included[3:-2]
+    logger.info(f"Filter property is {filter_property}")
+    return filter_property
 
 
 def main() -> None:
@@ -120,22 +121,26 @@ def main() -> None:
             query = json.load(query_file)
 
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
-        filter_property = get_filter_property(query)
-
-        # Get filter values from export files
+        logger.info(f"Analytic object to fetch history: {analytic_object}")
         table_metadata = dv_manager.get_table_metadata(export_uuid, analytic_object)
-        file_infos = table_metadata[COMMON_COLUMNS][FILES]
-        property_values = dv_manager.read_property_values(export_uuid, file_infos, filter_property)
 
-        # Fetch analytic object history for each filter value
-        filter_values = set(property_values)
+        # Trying to get filter property from query
+        filter_property = get_filter_property(query)
+        filter_values = None
+        if filter_property is not None:
+            # Get filter values from export files
+            file_infos = table_metadata[COMMON_COLUMNS][FILES]
+            property_values = dv_manager.read_property_values(export_uuid, file_infos, filter_property)
+            filter_values = set(property_values)
+
+        # Fetch analytic object history
         history_fetcher = HistoryFetcher(session)
-        history_rows = history_fetcher.list_changes(query, filter_values)
+        properties, history_rows = history_fetcher.list_changes(query, filter_values)
 
         # Save history to database
         data_store = DataStore(config[DB_URL])
         data_store.drop_table_if_exists(analytic_object)
-        data_store.create_table(analytic_object, query[COLUMNS], table_metadata[COMMON_COLUMNS][COLUMNS])
+        data_store.create_table_(analytic_object, query[COLUMNS], properties)
         data_store.save_to_db(analytic_object, history_rows)
 
 

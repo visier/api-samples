@@ -2,7 +2,6 @@ import io
 import logging
 import os
 import time
-import typing
 
 import pandas as pd
 from visier.api import DVExportApiClient
@@ -29,7 +28,7 @@ class DVManager:
         """Get the list of data versions available for export."""
         return self.dv_client.get_data_versions_available_for_export().json()[DATA_VERSIONS]
 
-    def get_table_metadata(self, export_uuid: str, table_name: str) -> dict[str, typing.Any]:
+    def get_table_metadata(self, export_uuid: str, table_name: str) -> dict[str, any]:
         """Get the metadata for a table in a DV export."""
         metadata_response = self.dv_client.get_data_version_export_metadata(export_uuid).json()
         table = next((x for x in metadata_response[TABLES] if x[NAME] == table_name), None)
@@ -63,7 +62,7 @@ class DVManager:
 
     def read_property_values(self,
                              export_uuid: str,
-                             file_infos: list[dict[str, typing.Any]],
+                             file_infos: list[dict[str, any]],
                              property_name: str) -> list[str]:
         """Read property changed values from the export files."""
         all_values = []
