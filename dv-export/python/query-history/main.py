@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 from collections import OrderedDict
+from typing import Any
 
 from dotenv import dotenv_values
 from visier.connector import make_auth, VisierSession
@@ -68,7 +69,7 @@ def parse_args() -> argparse.Namespace:
     return parsed_args
 
 
-def load_config() -> dict[str, any]:
+def load_config() -> dict[str, Any]:
     config = {
         **dotenv_values('.env.query-history'),
         **dotenv_values('.env.visier-auth'),
@@ -140,7 +141,7 @@ def main() -> None:
         # Save history to database
         data_store = DataStore(config[DB_URL])
         data_store.drop_table_if_exists(analytic_object)
-        data_store.create_table_(analytic_object, query[COLUMNS], properties)
+        data_store.create_table(analytic_object, query[COLUMNS], properties)
         data_store.save_to_db(analytic_object, history_rows)
 
 

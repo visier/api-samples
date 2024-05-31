@@ -2,6 +2,7 @@ import copy
 import logging
 import math
 from datetime import datetime
+from typing import Any
 
 from visier.api import ModelApiClient, QueryApiClient
 from visier.connector import VisierSession
@@ -49,8 +50,8 @@ class HistoryFetcher:
         self.query_client = QueryApiClient(session, raise_on_error=True)
 
     def list_changes(self,
-                     query_orig: dict[str, any],
-                     filters_values: set[str] = None) -> (list[dict[str, any]], list[list[str]]):
+                     query_orig: dict[str, Any],
+                     filters_values: set[str] = None) -> (list[dict[str, Any]], list[list[str]]):
         """Query list changes for subject using filters_values."""
         analytic_object, properties = self._get_analytic_object_metadata(query_orig)
         query_updated = self._prepare_query(query_orig, analytic_object, filters_values)
@@ -58,7 +59,7 @@ class HistoryFetcher:
         logger.info(f"History for {query_updated[SOURCE]} fetched rows: {len(all_rows)}.")
         return properties, all_rows
 
-    def _get_analytic_object_metadata(self, query: dict[str, any]) -> tuple[dict[str, any], list[dict[str, any]]]:
+    def _get_analytic_object_metadata(self, query: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         analytic_object_response = self.model_client.get_analytic_objects([query[SOURCE][ANALYTIC_OBJECT]])
         analytic_object = analytic_object_response.json()[ANALYTIC_OBJECTS][0]
         properties = self.model_client.get_properties(query[SOURCE][ANALYTIC_OBJECT]).json()[PROPERTIES]
@@ -66,9 +67,9 @@ class HistoryFetcher:
         return analytic_object, properties
 
     def _prepare_query(self,
-                       query_orig: dict[str, any],
-                       analytic_object: dict[str, any],
-                       filters_values: set[str] = None) -> dict[str, any]:
+                       query_orig: dict[str, Any],
+                       analytic_object: dict[str, Any],
+                       filters_values: set[str] = None) -> dict[str, Any]:
         query = copy.deepcopy(query_orig)
         if filters_values is not None:
             logger.info(f"List changes for filter_values: {len(filters_values)}.")
@@ -82,7 +83,7 @@ class HistoryFetcher:
             query[OPTIONS][LIMIT] = self.DEFAULT_QUERY_LIMIT
         return query
 
-    def _fetch_data_with_pagination(self, query: dict[str, any]) -> list[list[str]]:
+    def _fetch_data_with_pagination(self, query: dict[str, Any]) -> list[list[str]]:
         limit = query[OPTIONS][LIMIT]
         page_num = 0
         all_rows = []
@@ -97,7 +98,7 @@ class HistoryFetcher:
             page_num += 1
         return all_rows
 
-    def _append_additional_properties(self, properties: list[dict[str, any]], analytic_object: dict[str, any]) -> None:
+    def _append_additional_properties(self, properties: list[dict[str, Any]], analytic_object: dict[str, Any]) -> None:
         object_type = analytic_object.get(TYPE)
         additional_props = self.additional_properties.get(object_type, [])
         for prop in additional_props:
@@ -106,7 +107,7 @@ class HistoryFetcher:
             properties.append(property_updated)
 
     @staticmethod
-    def _get_time_interval(data_start_date: int) -> dict[str, any]:
+    def _get_time_interval(data_start_date: int) -> dict[str, Any]:
         """Get the time range until utc now."""
         start_date = datetime.utcfromtimestamp(data_start_date / 1000)
         current_date = datetime.utcnow()
