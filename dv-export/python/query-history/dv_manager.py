@@ -75,10 +75,10 @@ class DVManager:
                 dir_path = os.path.join(self.export_files_path, export_uuid)
                 os.makedirs(dir_path, exist_ok=True)
                 file_path = os.path.join(dir_path, file_info[FILE_NAME])
-                with open(file_path, 'wb+') as f:  # 'wb+' mode for both writing and reading
+                with open(file_path, 'wb+') as f:
                     f.write(get_file_response.content)
                     f.flush()
-                    f.seek(0)  # reset file pointer to the beginning
+                    f.seek(0)
                     df = pd.read_csv(f, usecols=[property_name])
             else:
                 df = pd.read_csv(io.StringIO(get_file_response.content.decode('utf-8')),

@@ -36,18 +36,19 @@ logger = setup_logger()
 def parse_args() -> argparse.Namespace:
     logger.info("Parsing command line arguments.")
     parser = argparse.ArgumentParser(description='DV Query History sample.')
+    parser.add_argument('-l', '--list_dv', action='store_true', required=False,
+                        help="If provided, will show list of available data versions and exit.")
     parser.add_argument('-q', '--query_path', type=str, required=False,
-                        help="Filepath to query template.")
-    parser.add_argument('-d', '--data_version', type=int, required=False,
-                        help="Data Version number the script should export.")
+                        help="File path to query template.")
     parser.add_argument('-b', '--base_data_version', type=int, required=False,
                         help="Base Data Version number to compute a diff from.")
+    parser.add_argument('-d', '--data_version', type=int, required=False,
+                        help="Data Version number the script should export.")
     parser.add_argument('-e', '--export_uuid', type=str,
                         help="Optional export UUID to retrieve export metadata for. "
                              "If provided, a DV export job will not be scheduled.",
                         required=False)
-    parser.add_argument('-l', '--list_dv', action='store_true', required=False,
-                        help="If provided, will show list of available data versions.")
+
 
     parsed_args = parser.parse_args()
     logger.info("Arguments parsed. %s", ", ".join(f"{arg}: {value}" for arg, value in vars(parsed_args).items()))
