@@ -39,3 +39,8 @@ Command-line arguments include:
   the data version export files.
   Examples are in the `queries` path. More details are in
   the [Visier API documentation](https://docs.visier.com/developer/apis/data-model-query/swagger/current/index.html#/Query/Query_List:~:text=Query%20a%20list%20of%20details).
+
+Examples of command-line arguments:
+1. `-b 7000005 -d 7000006 -q queries/employee.json`  - export employee changes for the applicant object between data versions `7000005` and `7000006` 
+2. `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -q queries/productivity.json` - export productivity changes for the productivity object using the existing export with the UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`.  
+export_uuid could be found in logs after running the export job.  

@@ -10,7 +10,7 @@ from visier.connector import make_auth, VisierSession
 from constants import *
 from data_store import DataStore
 from dv_manager import DVManager
-from history_fetcher import HistoryFetcher
+from changes_fetcher import ChangesFetcher
 
 
 def setup_logger() -> logging.Logger:
@@ -49,7 +49,6 @@ def parse_args() -> argparse.Namespace:
                              "If provided, a DV export job will not be scheduled.",
                         required=False)
 
-
     parsed_args = parser.parse_args()
     logger.info("Arguments parsed. %s", ", ".join(f"{arg}: {value}" for arg, value in vars(parsed_args).items()))
 
@@ -72,7 +71,7 @@ def parse_args() -> argparse.Namespace:
 
 def load_config() -> dict[str, Any]:
     config = {
-        **dotenv_values('.env.query-history'),
+        **dotenv_values('.env.query-changes'),
         **dotenv_values('.env.visier-auth'),
         **dotenv_values('.env')
     }
@@ -123,7 +122,7 @@ def main() -> None:
             query = json.load(query_file)
 
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
-        logger.info(f"Analytic object to fetch history: {analytic_object}")
+        logger.info(f"Analytic object to fetch changes: {analytic_object}")
         table_metadata = dv_manager.get_table_metadata(export_uuid, analytic_object)
 
         # Trying to get filter property from query
@@ -135,15 +134,15 @@ def main() -> None:
             property_values = dv_manager.read_property_values(export_uuid, file_infos, filter_property)
             filter_values = set(property_values)
 
-        # Fetch analytic object history
-        history_fetcher = HistoryFetcher(session)
-        properties, history_rows = history_fetcher.list_changes(query, filter_values)
+        # Fetch analytic object changes
+        changes_fetcher = ChangesFetcher(session)
+        properties, changes_rows = changes_fetcher.list_changes(query, filter_values)
 
-        # Save history to database
+        # Save changes to database
         data_store = DataStore(config[DB_URL])
         data_store.drop_table_if_exists(analytic_object)
         data_store.create_table(analytic_object, query[COLUMNS], properties)
-        data_store.save_to_db(analytic_object, history_rows)
+        data_store.save_to_db(analytic_object, changes_rows)
 
 
 if __name__ == "__main__":

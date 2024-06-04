@@ -18,7 +18,6 @@ class DataStore:
         'String': String,
         'Date': BigInteger,
         'Number': Float,
-        'Number_No_Suffix': Float,
         'Integer': Integer,
         'Boolean': Boolean
     }
@@ -59,7 +58,7 @@ class DataStore:
             if prop is None:
                 logger.warning(f"Property not found for column {query_column}.")
                 continue
-            column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[prop[DATA_TYPE]])
+            column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[prop[PRIMITIVE_DATA_TYPE]])
             columns.append(column)
 
         Table(analytic_object, self.metadata, *columns)

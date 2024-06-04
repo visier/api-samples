@@ -12,8 +12,9 @@ from constants import *
 logger = logging.getLogger(__name__)
 
 
-class HistoryFetcher:
-    """Fetches values for all history of subject."""
+class ChangesFetcher:
+    """Fetches changes for full time existence of subject."""
+
     DEFAULT_QUERY_LIMIT = 1000
 
     # Additional properties to fetch for different object types.
@@ -56,7 +57,6 @@ class HistoryFetcher:
         analytic_object, properties = self._get_analytic_object_metadata(query_orig)
         query_updated = self._prepare_query(query_orig, analytic_object, filters_values)
         all_rows = self._fetch_data_with_pagination(query_updated)
-        logger.info(f"History for {query_updated[SOURCE]} fetched rows: {len(all_rows)}.")
         return properties, all_rows
 
     def _get_analytic_object_metadata(self, query: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -72,7 +72,7 @@ class HistoryFetcher:
                        filters_values: set[str] = None) -> dict[str, Any]:
         query = copy.deepcopy(query_orig)
         if filters_values is not None:
-            logger.info(f"List changes for filter_values: {len(filters_values)}.")
+            logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
             query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
                 {PATH: [filter_value]} for filter_value in filters_values
             ]
@@ -91,11 +91,12 @@ class HistoryFetcher:
             query[OPTIONS][PAGE] = page_num
             result_table = self.query_client.list(query)
             rows = list(result_table.rows())
-            logger.info(f"History for {query[SOURCE]} page: {page_num}, rows: {len(rows)}.")
+            logger.info(f"Batch changes for {query[SOURCE]} fetched page: {page_num}, rows: {len(rows)}.")
             all_rows.extend(rows)
             if len(rows) < limit:
                 break
             page_num += 1
+        logger.info(f"Full changes for {query[SOURCE]} fetched rows: {len(all_rows)}.")
         return all_rows
 
     def _append_additional_properties(self, properties: list[dict[str, Any]], analytic_object: dict[str, Any]) -> None:
