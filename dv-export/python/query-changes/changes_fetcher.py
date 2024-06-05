@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class ChangesFetcher:
-    """Fetches changes for full time existence of subject."""
+    """Fetches all the changes that are defined for a given subject."""
 
-    DEFAULT_QUERY_LIMIT = 1000
+    DEFAULT_QUERY_LIMIT = 100000
 
     # Additional properties to fetch for different object types.
     additional_properties = {

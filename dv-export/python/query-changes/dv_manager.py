@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class DVManager:
+    """Manager for executing DV export jobs and reading property changed values."""
+
     def __init__(self, session: VisierSession,
                  save_export_files_on_disk: bool,
                  export_files_path: str,

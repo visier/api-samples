@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Any
 
 from sqlalchemy import String, Float, Integer, BigInteger, Boolean, insert, create_engine, Column, Table, MetaData
@@ -21,15 +20,8 @@ class DataStore:
         'Integer': Integer,
         'Boolean': Boolean
     }
-    SQLITE_PREFIX = 'sqlite:///'
 
     def __init__(self, db_url: str, echo: bool = False) -> None:
-        # Create the database directory if it is SQLite
-        if db_url.startswith(self.SQLITE_PREFIX):
-            db_path = db_url[len(self.SQLITE_PREFIX):]
-            db_dir = os.path.dirname(db_path)
-            os.makedirs(db_dir, exist_ok=True)
-
         # Create the database if it does not exist
         if not database_exists(db_url):
             create_database(db_url)
