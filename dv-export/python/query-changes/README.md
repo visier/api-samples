@@ -33,8 +33,11 @@ Command-line arguments include:
 - `-d` or `--data_version`: The data version number the script should export.
 - `-e` or `--export_uuid`: An optional export UUID to retrieve exported data by. If provided, a DV export job will not
   be scheduled and files will be downloaded from the existing export.
-- `-q` or `--query`: File path to the query body for listing changes using the Query API (`/v1/data/query/list`).
-  It should include a filter for changes between data versions.
+- `-q` or `--query`: This argument specifies the location of your query files. 
+  It can be either a path to a directory or a path to a single query.json file. 
+  If a directory path is provided, all *.json files within that directory will be treated as query files, and they will be processed one by one. 
+  These queries are used to list changes via the Query API (/v1/data/query/list).
+  Query should contain a filter for changes between data versions.
   Use the memberSet include filter with the {{PropertyName}} placeholder, which will be replaced with actual values from
   the data version export files.
   Examples are in the `queries` path. More details are in

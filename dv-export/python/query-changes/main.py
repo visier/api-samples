@@ -1,16 +1,19 @@
 import argparse
 import json
 import logging
+import os
+import typing
 from collections import OrderedDict
 from typing import Any
 
 from dotenv import dotenv_values
 from visier.connector import make_auth, VisierSession
 
+from changes_fetcher import ChangesFetcher
 from constants import *
 from data_store import DataStore
 from dv_manager import DVManager
-from changes_fetcher import ChangesFetcher
+from command_handler import CommandHandler
 
 
 def setup_logger() -> logging.Logger:
@@ -79,18 +82,25 @@ def load_config() -> dict[str, Any]:
     return config
 
 
-def get_filter_property(query):
-    filters = query.get(FILTERS, [{}])
-    member_set = filters[0].get(MEMBER_SET, {})
-    values = member_set.get(VALUES, {})
-    included = values.get(INCLUDED)
+def create_command_handler(session: VisierSession, config: dict[str, typing.Any]) -> CommandHandler:
+    """Create a CommandHandler instance with the provided session and configuration."""
+    dv_manager = DVManager(session,
+                           bool(config[DV_SAVE_EXPORT_FILES_ON_DISK]),
+                           config[DV_EXPORT_FILES_PATH],
+                           job_status_poll_interval_sec=int(config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS]),
+                           job_timeout_sec=int(config[DV_JOB_TIMEOUT_SECONDS]))
+    changes_fetcher = ChangesFetcher(session)
+    data_store = DataStore(config[DB_URL])
+    return CommandHandler(dv_manager, changes_fetcher, data_store)
 
-    if included is None or not included.startswith('${{') or not included.endswith('}}'):
-        logger.warning("Filter property not found in query. History will be fetched without filters.")
-        return None
-    filter_property = included[3:-2]
-    logger.info(f"Filter property is {filter_property}")
-    return filter_property
+
+def get_query_files(path):
+    if os.path.isfile(path):
+        return [path]
+    elif os.path.isdir(path):
+        return [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.json')]
+    else:
+        raise ValueError(f"The path {path} is neither a file nor a directory.")
 
 
 def main() -> None:
@@ -99,50 +109,22 @@ def main() -> None:
 
     auth = make_auth(env_values=OrderedDict(config))
     with VisierSession(auth) as session:
-        dv_manager = DVManager(session,
-                               bool(config[DV_SAVE_EXPORT_FILES_ON_DISK]),
-                               config[DV_EXPORT_FILES_PATH],
-                               job_status_poll_interval_sec=int(config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS]),
-                               job_timeout_sec=int(config[DV_JOB_TIMEOUT_SECONDS]))
+        command_handler = create_command_handler(session, config)
 
         # List available data versions for export
         if args.list_dv:
-            data_versions = dv_manager.get_data_versions()
+            data_versions = command_handler.get_data_versions()
             logger.info(f"Data versions fetched successfully:\n {json.dumps(data_versions, indent=2)}")
             return
 
-        # Execute export job if export UUID is not provided
-        if args.export_uuid is None:
-            export_uuid = dv_manager.execute_export_job(args.base_data_version, args.data_version)
-        else:
-            export_uuid = args.export_uuid
+        # If export_uuid is not provided, execute a DV export job
+        export_uuid = args.export_uuid or command_handler.execute_export_job(args.base_data_version, args.data_version)
 
-        # Load query from file
-        with open(args.query_path, 'r') as query_file:
-            query = json.load(query_file)
-
-        analytic_object = query[SOURCE][ANALYTIC_OBJECT]
-        logger.info(f"Analytic object to fetch changes: {analytic_object}")
-        table_metadata = dv_manager.get_table_metadata(export_uuid, analytic_object)
-
-        # Trying to get filter property from query
-        filter_property = get_filter_property(query)
-        filter_values = None
-        if filter_property is not None:
-            # Get filter values from export files
-            file_infos = table_metadata[COMMON_COLUMNS][FILES]
-            property_values = dv_manager.read_property_values(export_uuid, file_infos, filter_property)
-            filter_values = set(property_values)
-
-        # Fetch analytic object changes
-        changes_fetcher = ChangesFetcher(session)
-        properties, changes_rows = changes_fetcher.list_changes(query, filter_values)
-
-        # Save changes to database
-        data_store = DataStore(config[DB_URL])
-        data_store.drop_table_if_exists(analytic_object)
-        data_store.create_table(analytic_object, query[COLUMNS], properties)
-        data_store.save_to_db(analytic_object, changes_rows)
+        # Load one or several query files and process them
+        for query_file in get_query_files(args.query_path):
+            with open(query_file, 'r') as f:
+                query = json.load(f)
+            command_handler.process_query(export_uuid, query)
 
 
 if __name__ == "__main__":
