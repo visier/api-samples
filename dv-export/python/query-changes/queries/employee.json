@@ -1,0 +1,93 @@
+{
+  "source": {
+    "analyticObject": "Employee"
+  },
+  "columns": [
+    {
+      "columnName": "EmployeeID",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.EmployeeID",
+          "qualifyingPath": "Employee"
+        }
+      }
+    },
+    {
+      "columnName": "First Name",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.First_Name",
+          "qualifyingPath": "Employee"
+        }
+      }
+    },
+    {
+      "columnName": "Last Name",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.Last_Name",
+          "qualifyingPath": "Employee"
+        }
+      }
+    },
+    {
+      "columnName": "Organization",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.Organization_ID",
+          "qualifyingPath": "Employee"
+        }
+      }
+    },
+    {
+      "columnName": "Validity_Start",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.ValidityStart",
+          "qualifyingPath": "Employee"
+        }
+      }
+    },
+    {
+      "columnName": "Validity_End",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.ValidityEnd",
+          "qualifyingPath": "Employee"
+        }
+      }
+    },
+    {
+      "columnName": "Last Promotion Date",
+      "columnDefinition": {
+        "property": {
+          "name": "Employee.Last_Promotion_Date",
+          "qualifyingPath": "Employee"
+        }
+      }
+    }
+  ],
+  "sortOptions": [
+    {
+      "columnIndex": 4,
+      "sortDirection": "SORT_ASCENDING"
+    }
+  ],
+  "filters": [
+    {
+      "memberSet": {
+        "dimension": {
+          "name": "EmployeeID_Hierarchy",
+          "qualifyingPath": "Employee"
+        },
+        "values": {
+          "included": "${{EmployeeID}}"
+        }
+      }
+    }
+  ],
+  "options": {
+    "recordMode": "CHANGES",
+    "limit": 10000
+  }
+}
