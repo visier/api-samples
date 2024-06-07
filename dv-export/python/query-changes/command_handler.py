@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 class CommandHandler:
     """
     Handle commands from the user:
-    - Retrieves a list of available data versions for export;
-    - Executes a DV export task, waits for its completion, and returns the export UUID;
+    - Retrieves a list of DVs available to export.
+    - Runs a DV export job, waits for the job to complete, and returns the export UUID.
     - Processes requests using filtering and saves the changes to the database.
     """
 
@@ -23,11 +23,11 @@ class CommandHandler:
         self.data_store = data_store
 
     def get_data_versions(self):
-        """Get the list of data versions available for export."""
+        """Retrieve the list of DVs available to export."""
         return self.dv_manager.get_data_versions()
 
     def execute_export_job(self, base_data_version: int, data_version: int) -> str:
-        """Execute a DV export job, wait for it to complete, and return the export UUID."""
+        """Run a DV export job, wait for it to complete, and then return the export UUID."""
         return self.dv_manager.execute_export_job(base_data_version, data_version)
 
     def process_query(self, export_uuid: str, query: dict[str, typing.Any]):
@@ -35,10 +35,10 @@ class CommandHandler:
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
         logger.info(f"Analytic object to fetch changes: {analytic_object}")
 
-        # Trying to get filter property from query
+        # Retrieve filter from query
         filter_values = self._read_filter_values(analytic_object, export_uuid, query)
 
-        # Fetch analytic object changes
+        # Retrieve analytic object changes
         properties, changes_rows = self.changes_fetcher.list_changes(query, filter_values)
 
         # Save changes to the database
@@ -62,15 +62,15 @@ class CommandHandler:
         included = values.get(INCLUDED)
 
         if included is None or not included.startswith('${{') or not included.endswith('}}'):
-            logger.warning("Filter property not found in query. History will be fetched without filters.")
+            logger.warning("Filter not found in query. Fetching history without filters.")
             return None
         filter_property = included[3:-2]
-        logger.info(f"Filter property is {filter_property}")
+        logger.info(f"Filter is {filter_property}")
         return filter_property
 
     def _save_to_db(self, analytic_object, query, properties, changes_rows):
-        """Drop and create a table in the database and save changes to it."""
+        """Drop table in database, create table in database, and save changes to database."""
         self.data_store.drop_table_if_exists(analytic_object)
         self.data_store.create_table(analytic_object, query[COLUMNS], properties)
         self.data_store.save_to_db(analytic_object, changes_rows)
-        logger.info(f"Changes for {analytic_object} were saved to the database.")
+        logger.info(f"Saved changes to {analytic_object} to the database.")
