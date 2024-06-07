@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChangesFetcher:
-    """Fetches all the changes that are defined for a given subject."""
+    """Fetches all changes that are defined for a given analytic object."""
 
     DEFAULT_QUERY_LIMIT = 100000
 
@@ -53,7 +53,7 @@ class ChangesFetcher:
     def list_changes(self,
                      query_orig: dict[str, Any],
                      filters_values: set[str] = None) -> (list[dict[str, Any]], list[list[str]]):
-        """Query list changes for subject using filters_values."""
+        """Query list changes for an analytic object using filters_values."""
         analytic_object, properties = self._get_analytic_object_metadata(query_orig)
         query_updated = self._prepare_query(query_orig, analytic_object, filters_values)
         all_rows = self._fetch_data_with_pagination(query_updated)
@@ -72,12 +72,12 @@ class ChangesFetcher:
                        filters_values: set[str] = None) -> dict[str, Any]:
         query = copy.deepcopy(query_orig)
         if filters_values is not None:
-            logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
+            logger.info(f"List changes for unique filters_values: {len(filters_values)}.")
             query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
                 {PATH: [filter_value]} for filter_value in filters_values
             ]
         else:
-            logger.info(f"List changes without filter_values.")
+            logger.info(f"List changes without filters_values.")
         query[TIME_INTERVAL] = self._get_time_interval(int(analytic_object[DATA_START_DATE]))
         if query[OPTIONS][LIMIT] is None:
             query[OPTIONS][LIMIT] = self.DEFAULT_QUERY_LIMIT
@@ -109,11 +109,11 @@ class ChangesFetcher:
 
     @staticmethod
     def _get_time_interval(data_start_date: int) -> dict[str, Any]:
-        """Get the time range until utc now."""
+        """Retrieve the time range from timestamp until UTC now."""
         start_date = datetime.utcfromtimestamp(data_start_date / 1000)
         current_date = datetime.utcnow()
         diff_days = math.ceil((current_date - start_date).total_seconds() / 86400)
-        logger.info("History period to fetch: "
+        logger.info("Time period to fetch: "
                     f"{data_start_date} ({start_date}) - {current_date.timestamp() * 1000} ({current_date}). "
                     f"Days: {diff_days}.")
         return {
