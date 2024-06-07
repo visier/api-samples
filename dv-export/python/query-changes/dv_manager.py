@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class DVManager:
-    """ Manages retrieves data versions (DV), executes DV export jobs, reads changes. """
+    """ Retrieves DVs, executes DV export jobs, and reads changes. """
 
     def __init__(self, session: VisierSession,
                  save_export_files_on_disk: bool,
@@ -28,18 +28,18 @@ class DVManager:
         self.job_timeout_sec = job_timeout_sec
 
     def get_data_versions(self):
-        """Get the list of data versions available for export."""
+        """Retrieve a list of DVs available to export."""
         return self.dv_client.get_data_versions_available_for_export().json()[DATA_VERSIONS]
 
     def execute_export_job(self, base_data_version: int, data_version: int) -> str:
-        """Execute a DV export job, wait for it to complete, and return the export UUID."""
+        """Run a DV export job, wait for it to complete, and then return the export UUID."""
         if base_data_version is None:
             schedule_response = self.dv_client.schedule_initial_data_version_export_job(data_version).json()
         else:
             schedule_response = self.dv_client.schedule_delta_data_version_export_job(data_version,
                                                                                       base_data_version).json()
         job_id = schedule_response[JOB_UUID]
-        logger.info(f"DV export job {job_id} was scheduled, base dv {base_data_version}, dv {data_version}.")
+        logger.info(f"Scheduled DV export job {job_id} for base DV {base_data_version} and DV {data_version}.")
 
         start_time = time.time()
         while True:
@@ -50,7 +50,7 @@ class DVManager:
                 if failed:
                     raise RuntimeError(f"Job failed: {status_response}.")
                 export_uuid = status_response[EXPORT_UUID]
-                logger.info(f"Job {job_id} complete with export_uuid {export_uuid}")
+                logger.info(f"Job {job_id} complete with export UUID {export_uuid}")
                 return export_uuid
             else:
                 elapsed_time = time.time() - start_time
@@ -62,7 +62,7 @@ class DVManager:
                              export_uuid: str,
                              analytic_object: str,
                              property_name: str) -> list[str]:
-        """Read property changed values from the export files."""
+        """Read the changed values from the export files."""
         table_metadata = self._get_table_metadata(export_uuid, analytic_object)
         file_infos = table_metadata[COMMON_COLUMNS][FILES]
 
@@ -88,9 +88,9 @@ class DVManager:
         return all_values
 
     def _get_table_metadata(self, export_uuid: str, table_name: str) -> dict[str, Any]:
-        """Get the metadata for a table in a DV export."""
+        """Retrieve information about a table in a DV export."""
         metadata_response = self.dv_client.get_data_version_export_metadata(export_uuid).json()
         table = next((x for x in metadata_response[TABLES] if x[NAME] == table_name), None)
         if table is None:
-            raise ValueError(f"Table {table_name} not found in export metadata.")
+            raise ValueError(f"Table {table_name} not found in export.")
         return table
