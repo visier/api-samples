@@ -1,5 +1,7 @@
 import logging
+import time
 import typing
+from enum import Enum
 
 from changes_fetcher import ChangesFetcher
 from constants import *
@@ -9,6 +11,16 @@ from dv_manager import DVManager
 logger = logging.getLogger(__name__)
 
 
+class QueryMode(Enum):
+    """
+    Query modes.
+    RESTATE: fetch full history for analytic object.
+    DELTA: fetch only the last change for the analytic object.
+    """
+    RESTATE = 'restate'
+    DELTA = 'delta'
+
+
 class CommandHandler:
     """
     Handle commands from the user:
@@ -16,6 +28,11 @@ class CommandHandler:
     - Executes a DV export task, waits for its completion, and returns the export UUID;
     - Processes requests using filtering and saves the changes to the database.
     """
+
+    record_modes = {
+        QueryMode.RESTATE: CHANGES,
+        QueryMode.DELTA: NORMAL
+    }
 
     def __init__(self, dv_manager: DVManager, changes_fetcher: ChangesFetcher, data_store: DataStore):
         self.dv_manager = dv_manager
@@ -30,32 +47,48 @@ class CommandHandler:
         """Execute a DV export job, wait for it to complete, and return the export UUID."""
         return self.dv_manager.execute_export_job(base_data_version, data_version)
 
-    def process_query(self, export_uuid: str, query: dict[str, typing.Any]):
+    def process_query(self, export_uuid: str, query: dict[str, typing.Any], query_mode: QueryMode):
         """Process the query using filtering and save changes to the database."""
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
         logger.info(f"Analytic object to fetch changes: {analytic_object}")
 
         # Trying to get filter property from query
-        filter_values = self._read_filter_values(analytic_object, export_uuid, query)
+        filter_name = self._get_filter_name(query)
+        filter_values = self._read_filter_values(export_uuid, analytic_object, filter_name) if filter_name else None
+
+        # Getting metadata and properties for analytic object
+        analytic_object_metadata, properties = self.changes_fetcher.get_analytic_object_metadata(analytic_object)
+
+        # Getting start and end for query changes depending on command mode
+        start_time_epoch, end_time_epoch = self._get_time_period_borders(export_uuid,
+                                                                         analytic_object_metadata,
+                                                                         query_mode)
 
         # Fetch analytic object changes
-        properties, changes_rows = self.changes_fetcher.list_changes(query, filter_values)
+        changes_rows = self.changes_fetcher.execute_query_list(query, start_time_epoch, end_time_epoch,
+                                                               self.record_modes[query_mode], filter_values)
 
         # Save changes to the database
-        self._save_to_db(analytic_object, query, properties, changes_rows)
+        self._save_to_db(analytic_object, filter_name, filter_values, query, properties, changes_rows, query_mode)
 
-    def _read_filter_values(self, analytic_object_name: str, export_uuid: str, query):
-        filter_property_name = self._get_filter_property_name(query)
-        filter_values = None
-        if filter_property_name is not None:
-            # Get filter values from export files
-            property_values = self.dv_manager.read_property_values(export_uuid, analytic_object_name,
-                                                                   filter_property_name)
-            filter_values = set(property_values)
+    def _get_time_period_borders(self, export_uuid: str, analytic_object_metadata: dict[str, typing.Any],
+                                 query_mode: QueryMode) -> (int, int):
+        if query_mode == QueryMode.DELTA:
+            start_time_epoch, end_time_epoch = self.dv_manager.get_export_data_version_times(export_uuid)
+        elif query_mode == QueryMode.RESTATE:
+            start_time_epoch, end_time_epoch = int(analytic_object_metadata[DATA_START_DATE]), int(time.time() * 1000)
+        else:
+            raise ValueError(f"Unknown command mode: {query_mode}")
+        return start_time_epoch, end_time_epoch
+
+    def _read_filter_values(self, export_uuid: str, analytic_object_name: str, filter_name: str):
+        # Get filter values from export files
+        property_values = self.dv_manager.read_property_values(export_uuid, analytic_object_name, filter_name)
+        filter_values = set(property_values)
         return filter_values
 
     @staticmethod
-    def _get_filter_property_name(query: dict[str, typing.Any]):
+    def _get_filter_name(query: dict[str, typing.Any]) -> str | None:
         filters = query.get(FILTERS, [{}])
         member_set = filters[0].get(MEMBER_SET, {})
         values = member_set.get(VALUES, {})
@@ -64,13 +97,23 @@ class CommandHandler:
         if included is None or not included.startswith('${{') or not included.endswith('}}'):
             logger.warning("Filter property not found in query. History will be fetched without filters.")
             return None
-        filter_property = included[3:-2]
-        logger.info(f"Filter property is {filter_property}")
-        return filter_property
+        filter_name = included[3:-2]
+        logger.info(f"Filter name is {filter_name}")
+        return filter_name
 
-    def _save_to_db(self, analytic_object, query, properties, changes_rows):
+    def _save_to_db(self, analytic_object,
+                    filter_name,
+                    filter_values,
+                    query,
+                    properties,
+                    changes_rows,
+                    query_mode: QueryMode):
         """Drop and create a table in the database and save changes to it."""
-        self.data_store.drop_table_if_exists(analytic_object)
-        self.data_store.create_table(analytic_object, query[COLUMNS], properties)
+        exists = self.data_store.table_exists(analytic_object)
+        if not exists:
+            self.data_store.create_table(analytic_object, query[COLUMNS], properties)
+        elif query_mode == QueryMode.RESTATE:
+            self.data_store.delete_rows(analytic_object, filter_name, filter_values)
+
         self.data_store.save_to_db(analytic_object, changes_rows)
         logger.info(f"Changes for {analytic_object} were saved to the database.")

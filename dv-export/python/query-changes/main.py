@@ -10,10 +10,10 @@ from dotenv import dotenv_values
 from visier.connector import make_auth, VisierSession
 
 from changes_fetcher import ChangesFetcher
+from command_handler import CommandHandler, QueryMode
 from constants import *
 from data_store import DataStore
 from dv_manager import DVManager
-from command_handler import CommandHandler
 
 
 def setup_logger() -> logging.Logger:
@@ -51,6 +51,12 @@ def parse_args() -> argparse.Namespace:
                         help="Optional export UUID to retrieve export metadata for. "
                              "If provided, a DV export job will not be scheduled.",
                         required=False)
+    parser.add_argument('-m', '--mode',
+                        type=QueryMode,
+                        help="Query mode:\n"
+                             "restate: fetch full history for analytic object.\n"
+                             "delta: fetch only last change for analytic object.",
+                        required=True)
 
     parsed_args = parser.parse_args()
     logger.info("Arguments parsed. %s", ", ".join(f"{arg}: {value}" for arg, value in vars(parsed_args).items()))
@@ -124,7 +130,7 @@ def main() -> None:
         for query_file in get_query_files(args.query_path):
             with open(query_file, 'r') as f:
                 query = json.load(f)
-            command_handler.process_query(export_uuid, query)
+            command_handler.process_query(export_uuid, query, args.mode)
 
 
 if __name__ == "__main__":

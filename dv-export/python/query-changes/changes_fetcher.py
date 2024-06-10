@@ -50,27 +50,34 @@ class ChangesFetcher:
         self.model_client = ModelApiClient(session, raise_on_error=True)
         self.query_client = QueryApiClient(session, raise_on_error=True)
 
-    def list_changes(self,
-                     query_orig: dict[str, Any],
-                     filters_values: set[str] = None) -> (list[dict[str, Any]], list[list[str]]):
+    def execute_query_list(self,
+                           query_orig: dict[str, Any],
+                           start_date_epoch: int,
+                           end_data_epoch: int,
+                           record_mode: str,
+                           filters_values: set[str] = None) -> list[list[str]]:
         """Query list changes for subject using filters_values."""
-        analytic_object, properties = self._get_analytic_object_metadata(query_orig)
-        query_updated = self._prepare_query(query_orig, analytic_object, filters_values)
-        all_rows = self._fetch_data_with_pagination(query_updated)
-        return properties, all_rows
+        time_interval = self._get_time_interval(start_date_epoch, end_data_epoch)
+        query_updated = self._prepare_query(query_orig, time_interval, record_mode, filters_values)
+        changes = self._fetch_data_with_pagination(query_updated)
+        return changes
 
-    def _get_analytic_object_metadata(self, query: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        analytic_object_response = self.model_client.get_analytic_objects([query[SOURCE][ANALYTIC_OBJECT]])
-        analytic_object = analytic_object_response.json()[ANALYTIC_OBJECTS][0]
-        properties = self.model_client.get_properties(query[SOURCE][ANALYTIC_OBJECT]).json()[PROPERTIES]
-        self._append_additional_properties(properties, analytic_object)
-        return analytic_object, properties
+    def get_analytic_object_metadata(self, analytic_object_name: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        analytic_object_response = self.model_client.get_analytic_objects([analytic_object_name])
+        analytic_object_metadata = analytic_object_response.json()[ANALYTIC_OBJECTS][0]
+        properties = self.model_client.get_properties(analytic_object_name).json()[PROPERTIES]
+        self._append_additional_properties(properties, analytic_object_metadata)
+        return analytic_object_metadata, properties
 
     def _prepare_query(self,
                        query_orig: dict[str, Any],
-                       analytic_object: dict[str, Any],
+                       time_interval: dict[str, Any],
+                       record_mode: str = NORMAL,
                        filters_values: set[str] = None) -> dict[str, Any]:
         query = copy.deepcopy(query_orig)
+        if OPTIONS not in query:
+            query[OPTIONS] = {}
+        query[OPTIONS][RECORD_MODE] = record_mode
         if filters_values is not None:
             logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
             query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
@@ -78,8 +85,8 @@ class ChangesFetcher:
             ]
         else:
             logger.info(f"List changes without filter_values.")
-        query[TIME_INTERVAL] = self._get_time_interval(int(analytic_object[DATA_START_DATE]))
-        if query[OPTIONS][LIMIT] is None:
+        query[TIME_INTERVAL] = time_interval
+        if query[OPTIONS].get(LIMIT) is None:
             query[OPTIONS][LIMIT] = self.DEFAULT_QUERY_LIMIT
         return query
 
@@ -108,17 +115,18 @@ class ChangesFetcher:
             properties.append(property_updated)
 
     @staticmethod
-    def _get_time_interval(data_start_date: int) -> dict[str, Any]:
+    def _get_time_interval(start_date_epoch: int, end_date_epoch: int) -> dict[str, Any]:
         """Get the time range until utc now."""
-        start_date = datetime.utcfromtimestamp(data_start_date / 1000)
-        current_date = datetime.utcnow()
-        diff_days = math.ceil((current_date - start_date).total_seconds() / 86400)
+        start_date = datetime.utcfromtimestamp(start_date_epoch / 1000)
+        end_date = datetime.utcfromtimestamp(end_date_epoch / 1000)
+
+        diff_days = math.ceil((end_date - start_date).total_seconds() / 86400)
         logger.info("History period to fetch: "
-                    f"{data_start_date} ({start_date}) - {current_date.timestamp() * 1000} ({current_date}). "
+                    f"{start_date_epoch} ({start_date}) - {end_date_epoch} ({end_date}). "
                     f"Days: {diff_days}.")
         return {
-            FROM_INSTANT: data_start_date,
-            INTERVAL_PERIOD_TYPE: PERIOD_TYPE_DAY,
+            FROM_INSTANT: end_date_epoch,
+            INTERVAL_PERIOD_TYPE: DAY,
             INTERVAL_PERIOD_COUNT: diff_days,
-            DIRECTION: FORWARD
+            DIRECTION: BACKWARD
         }

@@ -31,15 +31,18 @@ class DataStore:
         self.metadata.reflect(self.engine)
         self.session_make = sessionmaker(bind=self.engine)
 
-    def drop_table_if_exists(self, table_name: str) -> None:
-        """Drops a table from the database if exists."""
-        table = self.metadata.tables.get(table_name)
-        if table is not None:
-            table.drop(self.engine, checkfirst=True)
-            self.metadata.remove(table)
-            logger.info(f"Dropped table {table_name}.")
-        else:
-            logger.info(f"Table {table_name} does not exist.")
+    def table_exists(self, table_name: str) -> bool:
+        """Checks if a table exists in the database."""
+        return table_name in self.metadata.tables
+
+    def delete_rows(self, table_name: str, column_name, values):
+        """Deletes rows from a table based on the column name and values."""
+        with self.session_make() as session:
+            table = self.metadata.tables[table_name]
+            delete_stmt = table.delete().where(table.c[column_name].in_(values))
+            session.execute(delete_stmt)
+            session.commit()
+            logger.info(f"Deleted rows from table {table_name}.")
 
     def create_table(self, analytic_object: str, query_columns: dict, properties: list[dict[str, Any]]) -> None:
         """Creates a table in the database based on the query and table columns."""

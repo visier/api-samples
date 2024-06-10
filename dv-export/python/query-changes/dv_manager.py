@@ -31,6 +31,20 @@ class DVManager:
         """Get the list of data versions available for export."""
         return self.dv_client.get_data_versions_available_for_export().json()[DATA_VERSIONS]
 
+    def get_export_data_version_times(self, export_uuid: str) -> (int, int):
+        """Get the of data versions available for export."""
+        export_metadata = self.dv_client.get_data_version_export_metadata(export_uuid).json()
+        data_versions = self.get_data_versions()
+
+        base_data_version = next(
+            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[BASE_DATA_VERSION_NUMBER]), None)
+        data_version = next(
+            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[DATA_VERSION_NUMBER]), None)
+        base_dv_time = int(base_data_version[CREATED])
+        dv_time = int(data_version[CREATED])
+        logger.info(f"Export data versions time period: {base_dv_time} - {dv_time}.")
+        return base_dv_time, dv_time
+
     def execute_export_job(self, base_data_version: int, data_version: int) -> str:
         """Execute a DV export job, wait for it to complete, and return the export UUID."""
         if base_data_version is None:
@@ -74,7 +88,7 @@ class DVManager:
             if self.save_export_files_on_disk:
                 dir_path = os.path.join(self.export_files_path, export_uuid)
                 os.makedirs(dir_path, exist_ok=True)
-                file_path = os.path.join(dir_path, file_info[FILE_NAME])
+                file_path = os.path.join(dir_path, file_info[FILENAME])
                 with open(file_path, 'wb+') as f:
                     f.write(get_file_response.content)
                     f.flush()
