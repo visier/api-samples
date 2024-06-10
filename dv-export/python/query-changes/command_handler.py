@@ -24,8 +24,8 @@ class QueryMode(Enum):
 class CommandHandler:
     """
     Handle commands from the user:
-    - Retrieves a list of available data versions for export;
-    - Executes a DV export task, waits for its completion, and returns the export UUID;
+    - Retrieves a list of DVs available to export.
+    - Runs a DV export job, waits for the job to complete, and returns the export UUID.
     - Processes requests using filtering and saves the changes to the database.
     """
 
@@ -40,11 +40,11 @@ class CommandHandler:
         self.data_store = data_store
 
     def get_data_versions(self):
-        """Get the list of data versions available for export."""
+        """Retrieve the list of DVs available to export."""
         return self.dv_manager.get_data_versions()
 
     def execute_export_job(self, base_data_version: int, data_version: int) -> str:
-        """Execute a DV export job, wait for it to complete, and return the export UUID."""
+        """Run a DV export job, wait for it to complete, and then return the export UUID."""
         return self.dv_manager.execute_export_job(base_data_version, data_version)
 
     def process_query(self, export_uuid: str, query: dict[str, typing.Any], query_mode: QueryMode):
@@ -52,11 +52,11 @@ class CommandHandler:
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
         logger.info(f"Analytic object to fetch changes: {analytic_object}")
 
-        # Trying to get filter property from query
+        # Retrieve filter from query
         filter_name = self._get_filter_name(query)
         filter_values = self._read_filter_values(export_uuid, analytic_object, filter_name) if filter_name else None
 
-        # Getting metadata and properties for analytic object
+        # Retrieve analytic object changes
         analytic_object_metadata, properties = self.changes_fetcher.get_analytic_object_metadata(analytic_object)
 
         # Getting start and end for query changes depending on command mode
@@ -95,10 +95,10 @@ class CommandHandler:
         included = values.get(INCLUDED)
 
         if included is None or not included.startswith('${{') or not included.endswith('}}'):
-            logger.warning("Filter property not found in query. History will be fetched without filters.")
+            logger.warning("Filter not found in query. Fetching history without filters.")
             return None
         filter_name = included[3:-2]
-        logger.info(f"Filter name is {filter_name}")
+        logger.info(f"Filter is {filter_name}")
         return filter_name
 
     def _save_to_db(self, analytic_object,

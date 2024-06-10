@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChangesFetcher:
-    """Fetches all the changes that are defined for a given subject."""
+    """Fetches all changes that are defined for a given analytic object."""
 
     DEFAULT_QUERY_LIMIT = 100000
 
@@ -56,7 +56,7 @@ class ChangesFetcher:
                            end_data_epoch: int,
                            record_mode: str,
                            filters_values: set[str] = None) -> list[list[str]]:
-        """Query list changes for subject using filters_values."""
+        """Query list changes for an analytic object using filters_values."""
         time_interval = self._get_time_interval(start_date_epoch, end_data_epoch)
         query_updated = self._prepare_query(query_orig, time_interval, record_mode, filters_values)
         changes = self._fetch_data_with_pagination(query_updated)
@@ -79,12 +79,12 @@ class ChangesFetcher:
             query[OPTIONS] = {}
         query[OPTIONS][RECORD_MODE] = record_mode
         if filters_values is not None:
-            logger.info(f"List changes for unique filter_values: {len(filters_values)}.")
+            logger.info(f"List changes for unique filters_values: {len(filters_values)}.")
             query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
                 {PATH: [filter_value]} for filter_value in filters_values
             ]
         else:
-            logger.info(f"List changes without filter_values.")
+            logger.info(f"List changes without filters_values.")
         query[TIME_INTERVAL] = time_interval
         if query[OPTIONS].get(LIMIT) is None:
             query[OPTIONS][LIMIT] = self.DEFAULT_QUERY_LIMIT
@@ -116,12 +116,12 @@ class ChangesFetcher:
 
     @staticmethod
     def _get_time_interval(start_date_epoch: int, end_date_epoch: int) -> dict[str, Any]:
-        """Get the time range until utc now."""
+        """Retrieve the time range from timestamp until UTC now."""
         start_date = datetime.utcfromtimestamp(start_date_epoch / 1000)
         end_date = datetime.utcfromtimestamp(end_date_epoch / 1000)
 
         diff_days = math.ceil((end_date - start_date).total_seconds() / 86400)
-        logger.info("History period to fetch: "
+        logger.info("Time period to fetch: "
                     f"{start_date_epoch} ({start_date}) - {end_date_epoch} ({end_date}). "
                     f"Days: {diff_days}.")
         return {
