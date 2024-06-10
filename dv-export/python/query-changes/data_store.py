@@ -40,9 +40,9 @@ class DataStore:
         with self.session_make() as session:
             table = self.metadata.tables[table_name]
             delete_stmt = table.delete().where(table.c[column_name].in_(values))
-            session.execute(delete_stmt)
+            result = session.execute(delete_stmt)
             session.commit()
-            logger.info(f"Deleted rows from table {table_name}.")
+            logger.info(f"Deleted {result.rowcount} rows from table {table_name}.")
 
     def create_table(self, analytic_object: str, query_columns: dict, properties: list[dict[str, Any]]) -> None:
         """Creates a table in the database based on the query and table columns."""

@@ -54,8 +54,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('-m', '--mode',
                         type=QueryMode,
                         help="Query mode:\n"
-                             "restate: fetch full history for analytic object.\n"
-                             "delta: fetch only last change for analytic object.",
+                             "restate: fetch the full history for an analytic object.\n"
+                             "last: fetch only the last change for an analytic object.",
                         required=True)
 
     parsed_args = parser.parse_args()

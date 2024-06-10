@@ -60,7 +60,6 @@
     }
   ],
   "options": {
-    "recordMode": "CHANGES",
-    "limit": 10000
+    "limit": 100000
   }
 }

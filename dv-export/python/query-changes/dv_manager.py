@@ -78,12 +78,12 @@ class DVManager:
                              property_name: str) -> list[str]:
         """Read property changed values from the export files."""
         table_metadata = self._get_table_metadata(export_uuid, analytic_object)
-        file_infos = table_metadata[COMMON_COLUMNS][FILES]
-
+        file_infos = table_metadata[COMMON_COLUMNS][FILES] + table_metadata[NEW_COLUMNS][FILES]
         all_values = []
         for file_info in file_infos:
             file_id = file_info[FILE_ID]
-            logger.info(f"Downloading export file for {analytic_object} with file_id: {file_id}.")
+            file_name = file_info[FILENAME]
+            logger.info(f"Downloading export file for {analytic_object} file_id: {file_id}, file_name: {file_name}")
             get_file_response = self.dv_client.get_export_file(export_uuid, file_id)
             if self.save_export_files_on_disk:
                 dir_path = os.path.join(self.export_files_path, export_uuid)

@@ -15,10 +15,10 @@ class QueryMode(Enum):
     """
     Query modes.
     RESTATE: fetch full history for analytic object.
-    DELTA: fetch only the last change for the analytic object.
+    LAST: fetch only the last change for the analytic object.
     """
     RESTATE = 'restate'
-    DELTA = 'delta'
+    LAST = 'last'
 
 
 class CommandHandler:
@@ -31,7 +31,7 @@ class CommandHandler:
 
     record_modes = {
         QueryMode.RESTATE: CHANGES,
-        QueryMode.DELTA: NORMAL
+        QueryMode.LAST: NORMAL
     }
 
     def __init__(self, dv_manager: DVManager, changes_fetcher: ChangesFetcher, data_store: DataStore):
@@ -73,7 +73,7 @@ class CommandHandler:
 
     def _get_time_period_borders(self, export_uuid: str, analytic_object_metadata: dict[str, typing.Any],
                                  query_mode: QueryMode) -> (int, int):
-        if query_mode == QueryMode.DELTA:
+        if query_mode == QueryMode.LAST:
             start_time_epoch, end_time_epoch = self.dv_manager.get_export_data_version_times(export_uuid)
         elif query_mode == QueryMode.RESTATE:
             start_time_epoch, end_time_epoch = int(analytic_object_metadata[DATA_START_DATE]), int(time.time() * 1000)
@@ -110,10 +110,10 @@ class CommandHandler:
                     query_mode: QueryMode):
         """Drop and create a table in the database and save changes to it."""
         exists = self.data_store.table_exists(analytic_object)
+
         if not exists:
             self.data_store.create_table(analytic_object, query[COLUMNS], properties)
         elif query_mode == QueryMode.RESTATE:
             self.data_store.delete_rows(analytic_object, filter_name, filter_values)
 
         self.data_store.save_to_db(analytic_object, changes_rows)
-        logger.info(f"Changes for {analytic_object} were saved to the database.")
