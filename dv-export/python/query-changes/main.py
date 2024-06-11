@@ -9,8 +9,8 @@ from typing import Any
 from dotenv import dotenv_values
 from visier.connector import make_auth, VisierSession
 
-from changes_fetcher import ChangesFetcher
-from command_handler import CommandHandler, QueryMode
+from change_fetcher import ChangeFetcher
+from command_handler import CommandHandler, ExtractionMode
 from constants import *
 from data_store import DataStore
 from dv_manager import DVManager
@@ -52,8 +52,8 @@ def parse_args() -> argparse.Namespace:
                              "If provided, a DV export job isn't scheduled.",
                         required=False)
     parser.add_argument('-m', '--mode',
-                        type=QueryMode,
-                        help="Query mode:\n"
+                        type=ExtractionMode,
+                        help="Extraction mode:\n"
                              "restate: fetch the full history for an analytic object.\n"
                              "last: fetch only the last change for an analytic object.",
                         required=True)
@@ -88,16 +88,16 @@ def load_config() -> dict[str, Any]:
     return config
 
 
-def create_command_handler(session: VisierSession, config: dict[str, typing.Any]) -> CommandHandler:
+def create_command_handler(session: VisierSession, config: dict[str, Any]) -> CommandHandler:
     """Create a CommandHandler instance with the provided session and configuration."""
     dv_manager = DVManager(session,
                            bool(config[DV_SAVE_EXPORT_FILES_ON_DISK]),
                            config[DV_EXPORT_FILES_PATH],
                            job_status_poll_interval_sec=int(config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS]),
                            job_timeout_sec=int(config[DV_JOB_TIMEOUT_SECONDS]))
-    changes_fetcher = ChangesFetcher(session)
+    change_fetcher = ChangeFetcher(session)
     data_store = DataStore(config[DB_URL])
-    return CommandHandler(dv_manager, changes_fetcher, data_store)
+    return CommandHandler(dv_manager, change_fetcher, data_store)
 
 
 def get_query_files(path):

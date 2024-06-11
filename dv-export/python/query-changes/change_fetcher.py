@@ -2,7 +2,7 @@ import copy
 import logging
 import math
 from datetime import datetime
-from typing import Any
+from typing import Optional, Any
 
 from visier.api import ModelApiClient, QueryApiClient
 from visier.connector import VisierSession
@@ -12,7 +12,7 @@ from constants import *
 logger = logging.getLogger(__name__)
 
 
-class ChangesFetcher:
+class ChangeFetcher:
     """Fetches all changes that are defined for a given analytic object."""
 
     DEFAULT_QUERY_LIMIT = 100000
@@ -55,10 +55,10 @@ class ChangesFetcher:
                            start_date_epoch: int,
                            end_data_epoch: int,
                            record_mode: str,
-                           filters_values: set[str] = None) -> list[list[str]]:
-        """Query list changes for an analytic object using filters_values."""
+                           filter_values: Optional[set[str]] = None) -> list[list[str]]:
+        """Execute a query to list changes for a given analytic object."""
         time_interval = self._get_time_interval(start_date_epoch, end_data_epoch)
-        query_updated = self._prepare_query(query_orig, time_interval, record_mode, filters_values)
+        query_updated = self._prepare_query(query_orig, time_interval, record_mode, filter_values)
         changes = self._fetch_data_with_pagination(query_updated)
         return changes
 
@@ -73,18 +73,18 @@ class ChangesFetcher:
                        query_orig: dict[str, Any],
                        time_interval: dict[str, Any],
                        record_mode: str = NORMAL,
-                       filters_values: set[str] = None) -> dict[str, Any]:
+                       filter_values: Optional[set[str]] = None) -> dict[str, Any]:
         query = copy.deepcopy(query_orig)
         if OPTIONS not in query:
             query[OPTIONS] = {}
         query[OPTIONS][RECORD_MODE] = record_mode
-        if filters_values is not None:
-            logger.info(f"List changes for unique filters_values: {len(filters_values)}.")
+        if filter_values is not None:
+            logger.info(f"List changes for unique filter: {len(filter_values)}.")
             query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
-                {PATH: [filter_value]} for filter_value in filters_values
+                {PATH: [filter_value]} for filter_value in filter_values
             ]
         else:
-            logger.info(f"List changes without filters_values.")
+            logger.info(f"List changes without filters.")
         query[TIME_INTERVAL] = time_interval
         if query[OPTIONS].get(LIMIT) is None:
             query[OPTIONS][LIMIT] = self.DEFAULT_QUERY_LIMIT

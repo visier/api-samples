@@ -47,13 +47,13 @@ class DataStore:
     def create_table(self, analytic_object: str, query_columns: dict, properties: list[dict[str, Any]]) -> None:
         """Creates a table in the database based on the query and table columns."""
         properties_dict = {prop[ID]: prop for prop in properties}
-        columns = []
+        columns: list[Column] = []
         for query_column in query_columns:
             prop = properties_dict.get(query_column[COLUMN_DEFINITION][PROPERTY][NAME])
             if prop is None:
                 logger.warning(f"Property not found for column {query_column}.")
                 continue
-            column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[prop[PRIMITIVE_DATA_TYPE]])
+            column: Column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[prop[PRIMITIVE_DATA_TYPE]])
             columns.append(column)
 
         Table(analytic_object, self.metadata, *columns)

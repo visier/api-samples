@@ -2,7 +2,7 @@ import io
 import logging
 import os
 import time
-from typing import Any
+from typing import Any, Tuple
 
 import pandas as pd
 from visier.api import DVExportApiClient
@@ -31,15 +31,15 @@ class DVManager:
         """Retrieve a list of DVs available to export."""
         return self.dv_client.get_data_versions_available_for_export().json()[DATA_VERSIONS]
 
-    def get_export_data_version_times(self, export_uuid: str) -> (int, int):
+    def get_export_data_version_times(self, export_uuid: str) -> Tuple[int, int]:
         """Get the of data versions available for export."""
         export_metadata = self.dv_client.get_data_version_export_metadata(export_uuid).json()
         data_versions = self.get_data_versions()
 
         base_data_version = next(
-            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[BASE_DATA_VERSION_NUMBER]), None)
+            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[BASE_DATA_VERSION_NUMBER]))
         data_version = next(
-            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[DATA_VERSION_NUMBER]), None)
+            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[DATA_VERSION_NUMBER]))
         base_dv_time = int(base_data_version[CREATED])
         dv_time = int(data_version[CREATED])
         logger.info(f"Export data versions time period: {base_dv_time} - {dv_time}.")
@@ -79,7 +79,7 @@ class DVManager:
         """Read the changed values from the export files."""
         table_metadata = self._get_table_metadata(export_uuid, analytic_object)
         file_infos = table_metadata[COMMON_COLUMNS][FILES] + table_metadata[NEW_COLUMNS][FILES]
-        all_values = []
+        all_values: list[str] = []
         for file_info in file_infos:
             file_id = file_info[FILE_ID]
             file_name = file_info[FILENAME]

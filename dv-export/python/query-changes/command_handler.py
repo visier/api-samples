@@ -1,9 +1,9 @@
 import logging
 import time
-import typing
 from enum import Enum
+from typing import Any, Tuple
 
-from changes_fetcher import ChangesFetcher
+from change_fetcher import ChangeFetcher
 from constants import *
 from data_store import DataStore
 from dv_manager import DVManager
@@ -11,9 +11,9 @@ from dv_manager import DVManager
 logger = logging.getLogger(__name__)
 
 
-class QueryMode(Enum):
+class ExtractionMode(Enum):
     """
-    Query modes.
+    Extraction mode for fetching analytic object changes:
     RESTATE: fetch full history for analytic object.
     LAST: fetch only the last change for the analytic object.
     """
@@ -30,13 +30,13 @@ class CommandHandler:
     """
 
     record_modes = {
-        QueryMode.RESTATE: CHANGES,
-        QueryMode.LAST: NORMAL
+        ExtractionMode.RESTATE: CHANGES,
+        ExtractionMode.LAST: NORMAL
     }
 
-    def __init__(self, dv_manager: DVManager, changes_fetcher: ChangesFetcher, data_store: DataStore):
+    def __init__(self, dv_manager: DVManager, change_fetcher: ChangeFetcher, data_store: DataStore):
         self.dv_manager = dv_manager
-        self.changes_fetcher = changes_fetcher
+        self.change_fetcher = change_fetcher
         self.data_store = data_store
 
     def get_data_versions(self):
@@ -47,7 +47,7 @@ class CommandHandler:
         """Run a DV export job, wait for it to complete, and then return the export UUID."""
         return self.dv_manager.execute_export_job(base_data_version, data_version)
 
-    def process_query(self, export_uuid: str, query: dict[str, typing.Any], query_mode: QueryMode):
+    def process_query(self, export_uuid: str, query: dict[str, Any], extraction_mode: ExtractionMode):
         """Process the query using filtering and save changes to the database."""
         analytic_object = query[SOURCE][ANALYTIC_OBJECT]
         logger.info(f"Analytic object to fetch changes: {analytic_object}")
@@ -57,28 +57,28 @@ class CommandHandler:
         filter_values = self._read_filter_values(export_uuid, analytic_object, filter_name) if filter_name else None
 
         # Retrieve analytic object changes
-        analytic_object_metadata, properties = self.changes_fetcher.get_analytic_object_metadata(analytic_object)
+        analytic_object_metadata, properties = self.change_fetcher.get_analytic_object_metadata(analytic_object)
 
         # Getting start and end for query changes depending on command mode
         start_time_epoch, end_time_epoch = self._get_time_period_borders(export_uuid,
                                                                          analytic_object_metadata,
-                                                                         query_mode)
+                                                                         extraction_mode)
 
         # Fetch analytic object changes
-        changes_rows = self.changes_fetcher.execute_query_list(query, start_time_epoch, end_time_epoch,
-                                                               self.record_modes[query_mode], filter_values)
+        change_rows = self.change_fetcher.execute_query_list(query, start_time_epoch, end_time_epoch,
+                                                             self.record_modes[extraction_mode], filter_values)
 
         # Save changes to the database
-        self._save_to_db(analytic_object, filter_name, filter_values, query, properties, changes_rows, query_mode)
+        self._save_to_db(analytic_object, filter_name, filter_values, query, properties, change_rows, extraction_mode)
 
-    def _get_time_period_borders(self, export_uuid: str, analytic_object_metadata: dict[str, typing.Any],
-                                 query_mode: QueryMode) -> (int, int):
-        if query_mode == QueryMode.LAST:
+    def _get_time_period_borders(self, export_uuid: str, analytic_object_metadata: dict[str, Any],
+                                 extraction_mode: ExtractionMode) -> Tuple[int, int]:
+        if extraction_mode == ExtractionMode.LAST:
             start_time_epoch, end_time_epoch = self.dv_manager.get_export_data_version_times(export_uuid)
-        elif query_mode == QueryMode.RESTATE:
+        elif extraction_mode == ExtractionMode.RESTATE:
             start_time_epoch, end_time_epoch = int(analytic_object_metadata[DATA_START_DATE]), int(time.time() * 1000)
         else:
-            raise ValueError(f"Unknown command mode: {query_mode}")
+            raise ValueError(f"Unknown command mode: {extraction_mode}")
         return start_time_epoch, end_time_epoch
 
     def _read_filter_values(self, export_uuid: str, analytic_object_name: str, filter_name: str):
@@ -88,7 +88,7 @@ class CommandHandler:
         return filter_values
 
     @staticmethod
-    def _get_filter_name(query: dict[str, typing.Any]) -> str | None:
+    def _get_filter_name(query: dict[str, Any]) -> str | None:
         filters = query.get(FILTERS, [{}])
         member_set = filters[0].get(MEMBER_SET, {})
         values = member_set.get(VALUES, {})
@@ -106,12 +106,12 @@ class CommandHandler:
                     filter_values,
                     query,
                     properties,
-                    changes_rows,
-                    query_mode: QueryMode):
+                    change_rows,
+                    extraction_mode: ExtractionMode):
         """Create table if it does not exist and restate or append changes to the table."""
         if not self.data_store.table_exists(analytic_object):
             self.data_store.create_table(analytic_object, query[COLUMNS], properties)
-        elif query_mode == QueryMode.RESTATE:
+        elif extraction_mode == ExtractionMode.RESTATE:
             self.data_store.delete_rows(analytic_object, filter_name, filter_values)
 
-        self.data_store.save_to_db(analytic_object, changes_rows)
+        self.data_store.save_to_db(analytic_object, change_rows)
