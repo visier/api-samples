@@ -108,10 +108,8 @@ class CommandHandler:
                     properties,
                     changes_rows,
                     query_mode: QueryMode):
-        """Drop and create a table in the database and save changes to it."""
-        exists = self.data_store.table_exists(analytic_object)
-
-        if not exists:
+        """Create table if it does not exist and restate or append changes to the table."""
+        if not self.data_store.table_exists(analytic_object):
             self.data_store.create_table(analytic_object, query[COLUMNS], properties)
         elif query_mode == QueryMode.RESTATE:
             self.data_store.delete_rows(analytic_object, filter_name, filter_values)
