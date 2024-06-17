@@ -68,102 +68,72 @@ indicating changes that have occurred over time.
 `DV#`: These labels represent different data versions in the Visier project.
 
 ```plaintext
-Employee1:   ------V1--V2-------------------------V3------V4------->
-Employee2:   ---------------------V1---V2-------------V3----------->
-DataVersion: -DV1-----------DV2------------DV3-----------------DV4->
+Employee1:   --V1------------V2---------------------------------->
+Employee2:   --V1---------------V2------------------------------->
+Employee3:   --V1----------------------------------V2------------>
+DataVersion: --------DV1----------------DV2---------------DV3---->
 ```
 
 The same data is presented in a table format with dates:
 
-| Date       | Employee1 | Employee2 | DataVersion |
-|------------|-----------|-----------|-------------|
-| 2024-01-01 |           |           |             |
-| 2024-01-05 |           |           | DV1         |
-| 2024-01-10 | V1        |           |             |
-| 2024-01-15 | V2        |           |             |
-| 2024-01-25 |           |           | DV2         |
-| 2024-02-01 |           | V1        |             |
-| 2024-02-05 |           | V2        |             |
-| 2024-02-10 |           |           | DV3         |
-| 2024-02-20 | V3        |           |             |
-| 2024-03-01 |           | V3        |             |
-| 2024-03-10 | V4        |           |             |
-| 2024-03-25 |           |           | DV4         |
+| Date       | Employee1 | Employee2 | Employee3 | DataVersion |
+|------------|-----------|-----------|-----------|-------------|
+| 2024-01-20 | V1        | V1        | V1        | V1          |
+| 2024-02-01 |           |           |           | DV1         |
+| 2024-02-10 | V2        |           |           |             |
+| 2024-02-20 |           | V2        |           |             |
+| 2024-03-01 |           |           |           | DV2         |
+| 2024-03-20 |           |           | V2        |             |
+| 2024-04-01 |           |           |           | DV3         |
 
 ### Restate Mode Example:
 
-The `restate` mode fetches the full history for an analytic object that has changed between two data versions.
-The results will vary depending on when the application is run.
+In `restate` mode, the application identifies analytic object instances that have changed between
+the specified data versions provided by the user.
+For each of these changed instances, it retrieves the entire history.
+Because the full history will be retrieved, the results will vary depending on when the application was launched.
 
-#### Example 1: Running the Application on 2024-01-26
+#### Example: Running the Application on 2024-03-02
 
 The data at this date looks like:
 
 ```plaintext
-Employee1:   ------V1--V2------->
-Employee2:   ------------------->
-DataVersion: -DV1-----------DV2->
+Employee1:   --V1------------V2-------------->
+Employee2:   --V1---------------V2----------->
+Employee3:   --V1---------------------------->
+DataVersion: --------DV1----------------DV2-->
 ```
 
 Command: `-b DV1 -d DV2 -m restate -q queries/employee.json`
-During this period, only `Employee1` has changes. The resulting table will look like:
-
-| Date       | Employee1 |
-|------------|-----------|
-| 2024-01-10 | V1        |
-| 2024-01-15 | V2        |
-
-#### Example 2: Running the Application on 2024-03-26
-
-The data at this date looks like:
-
-```plaintext
-Employee1:   ------V1--V2-------------------------V3------V4------->
-Employee2:   ---------------------V1---V2-------------V3----------->
-DataVersion: -DV1-----------DV2------------DV3-----------------DV4->
-```
-
-During this period, both `Employee1` and `Employee2` have changes. The resulting table will look like:
+During this period, `Employee1` and `Employee2` has changes.
+The application will fetch the full history for each instance.
 
 | Date       | Employee1 | Employee2 |
 |------------|-----------|-----------|
-| 2024-01-10 | V1        |           |
-| 2024-01-15 | V2        |           |
-| 2024-02-01 |           | V1        |
-| 2024-02-05 |           | V2        |
-| 2024-02-20 | V3        |           |
-| 2024-03-01 |           | V3        |
-| 2024-03-10 | V4        |           |
+| 2024-01-20 | V1        | V1        |
+| 2024-02-01 |           |           |
+| 2024-02-10 | V2        |           |
+| 2024-02-20 |           | V2        |
+
+Before populating the table, all previous values for `Employee1` and `Employee2` will be removed.
 
 ### Last Mode Examples:
 
-The `last` mode fetches only the most recent change for an analytic object that has occurred between two data versions.
-In this mode, data will be appended to the table without restatement.
+In `last` mode, the application identifies analytic object instances that have changed between
+the specified data versions provided by the user.
+For each of these changed instances, it only fetches the most recent version within
+these data versions and appends it to the table.
 The results will be consistent regardless of when the application is run.
 
-#### Example 1: Running the Application with DV1 and DV2
+#### Example: Running the Application with DV1 and DV2
 
-Command: `-b DV1 -d DV2 -m last -q queries/employee.json`
-During this period, only `Employee1` has changes. The application will fetch only the most recent change in this period:
+Command: `-b DV2 -d DV3 -m last -q queries/employee.json`
 
-| Date       | Employee1 |
+During this period, only `Employee3` has changes.
+The application will fetch only the most recent change for `Employee3` between DV1 and DV2:
+
+| Date       | Employee3 |
 |------------|-----------|
-| 2024-01-15 | V2        |
+| 2024-03-20 | V2        |
 
-#### Example 2: Running the Application with DV2 and DV3
-
-During this period, only `Employee2` has changes. The application will fetch only the most recent change:
-
-| Date       | Employee2 |
-|------------|-----------|
-| 2024-02-05 | V2        |
-
-#### Example 3: Running the Application with DV3 and DV4
-
-During this period, both `Employee1` and `Employee2` have changes.
-The application will fetch only the most recent change for each:
-
-| Date       | Employee1 | Employee2 |
-|------------|-----------|-----------|
-| 2024-03-01 |           | V3        |
-| 2024-03-10 | V4        |           |
+This value will be appended to existing table.
