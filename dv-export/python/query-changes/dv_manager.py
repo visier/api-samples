@@ -2,7 +2,7 @@ import io
 import logging
 import os
 import time
-from typing import Any
+from typing import Any, Tuple
 
 import pandas as pd
 from visier.api import DVExportApiClient
@@ -30,6 +30,20 @@ class DVManager:
     def get_data_versions(self):
         """Retrieve a list of DVs available to export."""
         return self.dv_client.get_data_versions_available_for_export().json()[DATA_VERSIONS]
+
+    def get_export_data_version_times(self, export_uuid: str) -> Tuple[int, int]:
+        """Retrieve a list of the data versions available to export."""
+        export_metadata = self.dv_client.get_data_version_export_metadata(export_uuid).json()
+        data_versions = self.get_data_versions()
+
+        base_data_version = next(
+            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[BASE_DATA_VERSION_NUMBER]))
+        data_version = next(
+            (dv for dv in data_versions if dv[DATA_VERSION] == export_metadata[DATA_VERSION_NUMBER]))
+        base_dv_time = int(base_data_version[CREATED])
+        dv_time = int(data_version[CREATED])
+        logger.info(f"Export data versions time period: {base_dv_time} - {dv_time}.")
+        return base_dv_time, dv_time
 
     def execute_export_job(self, base_data_version: int, data_version: int) -> str:
         """Run a DV export job, wait for it to complete, and then return the export UUID."""
@@ -64,17 +78,17 @@ class DVManager:
                              property_name: str) -> list[str]:
         """Read the changed values from the export files."""
         table_metadata = self._get_table_metadata(export_uuid, analytic_object)
-        file_infos = table_metadata[COMMON_COLUMNS][FILES]
-
-        all_values = []
+        file_infos = table_metadata[COMMON_COLUMNS][FILES] + table_metadata[NEW_COLUMNS][FILES]
+        all_values: list[str] = []
         for file_info in file_infos:
             file_id = file_info[FILE_ID]
-            logger.info(f"Downloading export file for {analytic_object} with file_id: {file_id}.")
+            file_name = file_info[FILENAME]
+            logger.info(f"Downloading export file for {analytic_object} file_id: {file_id}, file_name: {file_name}")
             get_file_response = self.dv_client.get_export_file(export_uuid, file_id)
             if self.save_export_files_on_disk:
                 dir_path = os.path.join(self.export_files_path, export_uuid)
                 os.makedirs(dir_path, exist_ok=True)
-                file_path = os.path.join(dir_path, file_info[FILE_NAME])
+                file_path = os.path.join(dir_path, file_info[FILENAME])
                 with open(file_path, 'wb+') as f:
                     f.write(get_file_response.content)
                     f.flush()

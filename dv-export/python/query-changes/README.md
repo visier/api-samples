@@ -1,6 +1,6 @@
-# Data Version Query History
+# Query Data Version Changes
 
-The Data Version (DV) Query History sample application uses Visier APIs to fetch and analyze changes in your Visier tenant.
+The Query Data Version (DV) Changes sample application uses Visier APIs to fetch and analyze changes in your Visier tenant.
 
 ## Overview
 
@@ -10,15 +10,35 @@ The application performs the following operations:
 
 1. **Load data version changes**: The application uses `DVExportApiClient` to run an export job to retrieve the delta (differences) between two data versions in the `DVManager` class. The application waits for the job to complete. After the job completes successfully, the application downloads a file containing the changes to a specific analytic object (new columns, deleted columns, updated columns).
 
-2. **Select analytic object attributes**: From the downloaded export file, the application selects attributes to include in a list query. These are the attributes that the DV Export API didn't retrieve history for. The application also reduces repeated values.
+2. **Select analytic object attributes**: The application selects attributes from the downloaded export file to include in a list query as a filter. 
+The filter must be a dimension on the analytic object. Set the filter in the `memberSet` with the placeholder `${{DimensionName}}`. The sample application replaces the placeholder with the actual value from the DV export files. For example, the `employee.json` query file contains a filter for the `EmployeeID_Hierarchy` dimension with the placeholder `${{EmployeeID}}`: 
+    ```json:
+      "filters": [
+        {
+          "memberSet": {
+            "dimension": {
+              "name": "EmployeeID_Hierarchy",
+              "qualifyingPath": "Employee"
+            },
+            "values": {
+              "included": "${{EmployeeID}}"
+            }
+          }
+        }
+      ]
+    ```
 
 3. **Load history for analytic objects**: The application uses the Data Query API to fetch all changes by filtering by the selected attributes.
 
-4. **Save history in database**: The application creates a table and saves all received data in a database. If the table already exists, the applications drops and recreates the table.
+4. **Save history in database**: The application saves the fetched data in a database.
 
 ## Usage
 
-The application configuration is stored in the `.env.visier-auth` and `.env.visier-auth` files.
+The application stores its configuration in these files:
+
+`.env.visier-auth`: Contains the Visier authentication parameters.
+
+`.env.query-changes`: Contains the query changes script parameters.
 
 Command-line arguments include:
 
@@ -26,9 +46,83 @@ Command-line arguments include:
   list available data versions and exit.
 - `-b` or `--base_data_version`: The baseline data version number to use to generate a delta export.
 - `-d` or `--data_version`: The data version number the script should export.
-- `-e` or `--export_uuid`: An optional UUID of the data version export to download files from. If provided, a DV export job isn't scheduled.
-- `-q` or `--query`: An argument that specifies the location of your query files. The query can be a path to a directory or to a specific query.json file. If you provide a directory path, all *.json files in the directory are treated as query files and are processed individually. The application uses the queries to list changes through the Data Query API (`/v1/data/query/list`). A query must contain a filter for changes between data versions. Use the `memberSet` include filter with the `{{PropertyName}}` placeholder. The placeholder is replaced by actual values from the DV export files. For examples, see the `queries` path. For more information about list queries, see [Data Query API Reference](https://docs.visier.com/developer/apis/data-model-query/swagger/current/index.html#/Query/Query_List:~:text=Query%20a%20list%20of%20details).
+- `-e` or `--export_uuid`: An optional UUID of the data version export to download files from. If provided, a DV export job isn't scheduled. You can find `export_uuid` in logs after first run a DV export job.
+- `-m` or `--mode`: Specifies the query mode. Use `restate` to fetch the full history or `last` to fetch only the most recent change for data version.
+- `-q` or `--query`: An argument that specifies the location of your query files. The query can be a path to a directory or to a specific query.json file. If you provide a directory path, all *.json files in the directory are treated as query files and are processed individually. The application uses the queries to list changes through the Data Query API (`/v1/data/query/list`). A query must contain a filter for changes between data versions. Use the `memberSet` include filter with the `{{PropertyName}}` placeholder.
+This placeholder is replaced with actual values from the DV export files. For examples, see the `queries` path. For more information about list queries, see [Data Query API Reference](https://docs.visier.com/developer/apis/data-model-query/swagger/current/index.html#/Query/Query_List:~:text=Query%20a%20list%20of%20details).
 
 Command-line argument examples:
-- `-b 7000005 -d 7000006 -q queries/employee.json`: Export Employee changes for the Applicant object between data versions `7000005` and `7000006`.
-- `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -q queries/productivity.json`: Export Productivity changes for the Productivity object using an existing export with the UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`. You can find `export_uuid` in logs after running a DV export job.
+- `-b 7000005 -d 7000006 -m restate -q queries/employee.json`: Fetches the full history (data restatement) for Employee if EmployeeID is among the changed values between data versions `7000005` and `7000006`.
+- `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -m last -q queries/productivity.json`: Fetches the most recent changes for Productivity if EmployeeID is among the changed values between data versions using the export with UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`.
+- `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -m restate -q queries`: Fetches the full history (data restatement) for all queries in the `queries` directory using the export with UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`.
+
+## Data Samples
+
+Let's consider the timeline for the `Employee` object and the `DataVersion`.
+
+`V#`: Represents different versions of `Employee` data, indicating changes to employees over time.
+
+`DV#`: Represents different data versions in Visier.
+
+```plaintext
+Employee1:   --V1------------V2---------------------------------->
+Employee2:   --V1---------------V2------------------------------->
+Employee3:   --V1----------------------------------V2------------>
+DataVersion: --------DV1----------------DV2---------------DV3---->
+```
+
+We can represent the same data in a table with dates:
+
+| Date       | Employee1 | Employee2 | Employee3 | DataVersion |
+|------------|-----------|-----------|-----------|-------------|
+| 2024-01-20 | V1        | V1        | V1        | V1          |
+| 2024-02-01 |           |           |           | DV1         |
+| 2024-02-10 | V2        |           |           |             |
+| 2024-02-20 |           | V2        |           |             |
+| 2024-03-01 |           |           |           | DV2         |
+| 2024-03-20 |           |           | V2        |             |
+| 2024-04-01 |           |           |           | DV3         |
+
+### Restate Mode Example
+
+Use `restate` mode to identify records that changed between two data versions and then fetch the full history for each record that changed. You may get a different result depending when you run the sample application.
+
+#### Example: Run the Application on 2024-03-02
+
+On 2024-03-02, the data looks like:
+
+```plaintext
+Employee1:   --V1------------V2-------------->
+Employee2:   --V1---------------V2----------->
+Employee3:   --V1---------------------------->
+DataVersion: --------DV1----------------DV2-->
+```
+
+Command: `-b DV1 -d DV2 -m restate -q queries/employee.json`.
+
+Between `DV1` and `DV2`, `Employee1` and `Employee2` both changed. The application fetches the full history for each record, as shown next.
+
+| Date       | Employee1 | Employee2 |
+|------------|-----------|-----------|
+| 2024-01-20 | V1        | V1        |
+| 2024-02-01 |           |           |
+| 2024-02-10 | V2        |           |
+| 2024-02-20 |           | V2        |
+
+Before populating the table, the application removes all previous values for `Employee1` and `Employee2`.
+
+### Last Mode Example
+
+Use `last` mode to identify records that changed between two data versions and then fetch the most recent change that occurred for each record. In `last` mode, the application appends data to the table without restating the full history. The results are consistent regardless of when you run the sample application.
+
+#### Example: Run the Application with DV1 and DV2
+
+Command: `-b DV2 -d DV3 -m last -q queries/employee.json`.
+
+Between DV1 and DV2, only `Employee3` changed. The application fetches the most recent change for `Employee3`, as shown next.
+
+| Date       | Employee3 |
+|------------|-----------|
+| 2024-03-20 | V2        |
+
+The application appends the most recent change for `Employee3` to the table.
