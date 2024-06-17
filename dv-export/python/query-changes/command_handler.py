@@ -15,7 +15,7 @@ class ExtractionMode(Enum):
     """
     Extraction modes for fetching analytic object changes:
     - RESTATE: Fetch the full history of a record.
-    - LAST: Fetch the last change for a record.
+    - LAST: Fetch the most recent change for a record.
     """
     RESTATE = 'restate'
     LAST = 'last'
