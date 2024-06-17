@@ -32,7 +32,7 @@ class DVManager:
         return self.dv_client.get_data_versions_available_for_export().json()[DATA_VERSIONS]
 
     def get_export_data_version_times(self, export_uuid: str) -> Tuple[int, int]:
-        """Get the of data versions available for export."""
+        """Retrieve a list of the data versions available to export."""
         export_metadata = self.dv_client.get_data_version_export_metadata(export_uuid).json()
         data_versions = self.get_data_versions()
 

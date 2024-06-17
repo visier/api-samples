@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 class ExtractionMode(Enum):
     """
-    Extraction mode for fetching analytic object changes:
-    RESTATE: fetch full history for analytic object.
-    LAST: fetch only the last change for the analytic object.
+    Extraction modes for fetching analytic object changes:
+    - RESTATE: Fetch the full history of a record.
+    - LAST: Fetch the most recent change for a record.
     """
     RESTATE = 'restate'
     LAST = 'last'
