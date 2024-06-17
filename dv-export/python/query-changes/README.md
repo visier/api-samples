@@ -85,7 +85,7 @@ We can represent the same data in a table with dates:
 
 ### Restate Mode Example
 
-Use `restate` mode to fetch the full history of a record that changed between two data versions. You may get a different result depending when you run the sample application.
+Use `restate` mode to identify records that changed between two data versions and then fetch the full history for each record that changed. You may get a different result depending when you run the sample application.
 
 #### Example: Run the Application on 2024-03-02
 
@@ -113,7 +113,7 @@ Before populating the table, the application removes all previous values for `Em
 
 ### Last Mode Example
 
-Use `last` mode to fetch the most recent change that occurred for a record between two data versions. In `last` mode, the application appends data to the table without restating the full history. The results are consistent regardless of when you run the sample application.
+Use `last` mode to identify records that changed between two data versions and then fetch the most recent change that occurred for each record. In `last` mode, the application appends data to the table without restating the full history. The results are consistent regardless of when you run the sample application.
 
 #### Example: Run the Application with DV1 and DV2
 
