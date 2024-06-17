@@ -47,13 +47,13 @@ Command-line arguments include:
 - `-b` or `--base_data_version`: The baseline data version number to use to generate a delta export.
 - `-d` or `--data_version`: The data version number the script should export.
 - `-e` or `--export_uuid`: An optional UUID of the data version export to download files from. If provided, a DV export job isn't scheduled. You can find `export_uuid` in logs after first run a DV export job.
-- `-m` or `--mode`: Specifies the query mode. Use `restate` to fetch the full history, or `last` to fetch only the most recent change for data version.
+- `-m` or `--mode`: Specifies the query mode. Use `restate` to fetch the full history or `last` to fetch only the most recent change for data version.
 - `-q` or `--query`: An argument that specifies the location of your query files. The query can be a path to a directory or to a specific query.json file. If you provide a directory path, all *.json files in the directory are treated as query files and are processed individually. The application uses the queries to list changes through the Data Query API (`/v1/data/query/list`). A query must contain a filter for changes between data versions. Use the `memberSet` include filter with the `{{PropertyName}}` placeholder.
 This placeholder is replaced with actual values from the DV export files. For examples, see the `queries` path. For more information about list queries, see [Data Query API Reference](https://docs.visier.com/developer/apis/data-model-query/swagger/current/index.html#/Query/Query_List:~:text=Query%20a%20list%20of%20details).
 
 Command-line argument examples:
 - `-b 7000005 -d 7000006 -m restate -q queries/employee.json`: Fetches the full history (data restatement) for Employee if EmployeeID is among the changed values between data versions `7000005` and `7000006`.
-- `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -m last -q queries/productivity.json`: Fetches the last changes for Productivity if EmployeeID is among the changed values between data versions using the export with UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`.
+- `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -m last -q queries/productivity.json`: Fetches the most recent changes for Productivity if EmployeeID is among the changed values between data versions using the export with UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`.
 - `-e 92edafd0-22aa-11ef-9027-6fa2c7d9d5d2 -m restate -q queries`: Fetches the full history (data restatement) for all queries in the `queries` directory using the export with UUID `92edafd0-22aa-11ef-9027-6fa2c7d9d5d2`.
 
 ## Data Samples
