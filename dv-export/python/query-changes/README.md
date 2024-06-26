@@ -6,13 +6,17 @@ The Data Version (DV) Query History sample application uses Visier APIs to fetch
 
 Let’s say we want to maintain a database that restates all changes every time an analytic object changes in Visier. We can use the Data Version Export APIs to retrieve the changes between two data versions in a Visier tenant, which allows us to identify objects that changed and the changes that occurred. However, the DV Export API doesn't retrieve changes to calculated fields, like calculated properties. To get the full change history of all attributes including calculated fields, we can use the Data Query APIs to retrieve specific attributes with their full history that weren't retrieved by the DV Export API. After we have all attributes using both APIs, we can then create a table that saves all received data in a database. 
 
-The application performs the following operations:
+Diagram of the application flow:
+<img src="/assets/images/data-version-query-history.png" alt="Data Version Query History Diagram" width="700"/>
 
+The application performs the following operations:
 1. **Load data version changes**: The application uses `DVExportApiClient` to run an export job to retrieve the delta (differences) between two data versions in the `DVManager` class. The application waits for the job to complete. After the job completes successfully, the application downloads a file containing the changes to a specific analytic object (new columns, deleted columns, updated columns).
 
 2. **Select analytic object attributes**: From the downloaded export file, the application selects attributes to include in a list query. These are the attributes that the DV Export API didn't retrieve history for. The application also reduces repeated values.
 
-3. **Load history for analytic objects**: The application uses the Data Query API to fetch all changes by filtering by the selected attributes.
+3. **Load history for analytic objects**: The application uses the Data Query API to fetch changes by filtering by the selected attributes. 
+In `restate` mode, it fetches the full history for each instance.
+In `last` mode, it fetches only the most recent change for each instance.
 
 4. **Save history in database**: The application creates a table and saves all received data in a database. If the table already exists, the applications drops and recreates the table.
 
