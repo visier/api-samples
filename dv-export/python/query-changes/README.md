@@ -16,7 +16,7 @@ The application performs the following operations:
 
 3. **Load history for analytic objects**: The application uses the Data Query API to fetch changes by filtering by the selected attributes. 
 In `restate` mode, it fetches the full change event history for each entity instance that has changed.
-In `last` mode, it fetches only the most recent change for each instance.
+In `last` mode, it fetches the last state for each entity instance that has changed.
 
 4. **Save history in database**: The application creates a table and saves all received data in a database. If the table already exists, the applications drops and recreates the table.
 
