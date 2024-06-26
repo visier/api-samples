@@ -15,7 +15,7 @@ The application performs the following operations:
 2. **Select analytic object attributes**: From the downloaded export file, the application selects attributes to include in a list query. These are the attributes that the DV Export API didn't retrieve history for. The application also reduces repeated values.
 
 3. **Load history for analytic objects**: The application uses the Data Query API to fetch changes by filtering by the selected attributes. 
-In `restate` mode, it fetches the full history for each instance.
+In `restate` mode, it fetches the full change event history for each entity instance that has changed.
 In `last` mode, it fetches only the most recent change for each instance.
 
 4. **Save history in database**: The application creates a table and saves all received data in a database. If the table already exists, the applications drops and recreates the table.
