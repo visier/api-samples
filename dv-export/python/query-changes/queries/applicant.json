@@ -1,0 +1,65 @@
+{
+  "source": {
+    "analyticObject": "Applicant"
+  },
+  "columns": [
+    {
+      "columnName": "ApplicantID",
+      "columnDefinition": {
+        "property": {
+          "name": "Applicant.ApplicantID",
+          "qualifyingPath": "Applicant"
+        }
+      }
+    },
+    {
+      "columnName": "Validity_Start",
+      "columnDefinition": {
+        "property": {
+          "name": "Applicant.ValidityStart",
+          "qualifyingPath": "Applicant"
+        }
+      }
+    },
+    {
+      "columnName": "Validity_End",
+      "columnDefinition": {
+        "property": {
+          "name": "Applicant.ValidityEnd",
+          "qualifyingPath": "Applicant"
+        }
+      }
+    },
+    {
+      "columnName": "Offer_Salary_Amount",
+      "columnDefinition": {
+        "property": {
+          "name": "Applicant.Offer_Salary_Amount",
+          "qualifyingPath": "Applicant"
+        }
+      }
+    }
+  ],
+  "sortOptions": [
+    {
+      "columnIndex": 1,
+      "sortDirection": "SORT_ASCENDING"
+    }
+  ],
+  "filters": [
+    {
+      "memberSet": {
+        "dimension": {
+          "name": "ApplicantID_Hierarchy",
+          "qualifyingPath": "Applicant"
+        },
+        "values": {
+          "included": "${{ApplicantID}}"
+        }
+      }
+    }
+  ],
+  "options": {
+    "limit": 100000
+  }
+}
