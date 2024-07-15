@@ -1,7 +1,7 @@
 # Direct Data Intake API
 The Direct Data Intake (DDI) API is suitable for users whose data requires no additional transformations to load into Visier. Because the data is suitable to load into Visier without transformation, the data load process is "direct". In your data source files, the column names must exactly match the names of objects in Visier that you want to load data into.
 
-If only some of your data is suitable to load directly, you can use a combination of the DDI API and other data transfer methods to send all of your data to Visier.
+If only some of your data is suitable to load directly, you can use a combination of the DDI API and other data transfer methods to send all of your data to Visier. For more information about sending data to Visier, see [Data In](https://docs.visier.com/developer/Studio/data/data-in-home.htm).
 
 ## Data Intake Modes
 When using the DDI API, you must configure the data intake mode. This configuration defines the relationship between the DDI data category and any other data transfer methods that you use to send data to Visier.
