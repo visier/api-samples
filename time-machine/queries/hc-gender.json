@@ -26,12 +26,6 @@
           ]
         }
       }
-    ],
-    "filters": [],
-    "timeIntervals": {
-      "direction": "BACKWARD",
-      "intervalCount": 1,
-      "intervalPeriodType": "MONTH"
-    }
+    ]
   }
 }
