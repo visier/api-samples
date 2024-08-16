@@ -1,0 +1,37 @@
+{
+  "query": {
+    "source": {
+      "metric": "employeeCount"
+    },
+    "axes": [
+      {
+        "dimensionLevelSelection": {
+          "dimension": {
+            "name": "Gender",
+            "qualifyingPath": "Employee"
+          },
+          "levelIds": [
+            "Gender"
+          ]
+        }
+      },
+      {
+        "dimensionLevelSelection": {
+          "dimension": {
+            "name": "JobLevel",
+            "qualifyingPath": "Employee"
+          },
+          "levelIds": [
+            "JobLevel"
+          ]
+        }
+      }
+    ],
+    "filters": [],
+    "timeIntervals": {
+      "direction": "BACKWARD",
+      "intervalCount": 1,
+      "intervalPeriodType": "MONTH"
+    }
+  }
+}

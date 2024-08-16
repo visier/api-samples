@@ -4,3 +4,4 @@ node_modules/
 .idea
 *.log
 /dv-export/python/query-changes/data
+/time-machine/storage/
