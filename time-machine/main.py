@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 
 from dotenv import load_dotenv
 from visier.sdk.api.data_in import DataUploadApi
@@ -73,9 +74,9 @@ def download_data(config: Configuration,
     query_api = DataQueryApi(api_client)
 
     logger.info(f"Executing query: {query_file_path}")  # Combined messages
-    response = query_api.aggregate_without_preload_content(query_dto,
-                                                           _headers={'Accept': 'text/csv'})
+    response = query_api.aggregate_without_preload_content(query_dto)
 
+    os.makedirs(os.path.dirname(data_file_path), exist_ok=True)
     with open(data_file_path, mode='w') as f:
         f.write(response.data.decode())
     logger.info(f"Data saved to: {data_file_path}")  # Combined messages
@@ -103,12 +104,14 @@ def main():
     try:
         logger.info("Application started.")
         args = parse_args()
-        load_dotenv(override=True)
+        load_dotenv(dotenv_path='.env.time-machine', override=True)
+        load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
 
         file_name, _ = os.path.splitext(os.path.basename(args.query_file_path))
         storage_path = os.getenv('STORAGE_PATH', default='tmp_storage')
-        temp_data_file = os.path.join(storage_path, f'{file_name}.csv')
+        date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        temp_data_file = os.path.join(storage_path, f'{file_name}_{date_timestamp}.csv')
 
         download_data(api_config, args.query_file_path, temp_data_file)
 
