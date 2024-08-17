@@ -1,0 +1,43 @@
+{
+  "query": {
+    "source": {
+      "metrics": {
+        "columns": [
+          {
+            "id": "employeeCount",
+            "columnName": "headcount"
+          },
+          {
+            "id": "resignationCount",
+            "columnName": "resignation_count",
+            "qualifyingPath": "Employee_Exit.Employee"
+          },
+          {
+            "id": "resignationRate",
+            "columnName": "resignation_rate",
+            "qualifyingPath": "Employee_Exit.Employee"
+          }
+        ]
+      }
+    },
+    "axes": [
+      {
+        "dimensionLevelSelection": {
+          "dimension": {
+            "name": "Gender",
+            "qualifyingPath": "Employee"
+          },
+          "levelIds": [
+            "Gender"
+          ]
+        }
+      }
+    ],
+    "filters": [],
+    "timeIntervals": {
+      "dynamicDateFrom": "COMPLETE_PERIOD",
+      "intervalPeriodType": "MONTH",
+      "intervalCount": 1
+    }
+  }
+}
