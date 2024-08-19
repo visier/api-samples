@@ -1,5 +1,4 @@
-pandas>=2.2.2
 python-dotenv>=1.0.1
-SQLAlchemy>=2.0.29
-sqlalchemy_utils>=0.40.0
-visier_connector>=0.9.18
+visier.sdk.api.data-in>=22222222.99201.1418
+visier.sdk.api.data-out>=22222222.99201.1418
+Flask>=3.0.0

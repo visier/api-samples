@@ -55,6 +55,14 @@ def parse_args():
     return parsed_args
 
 
+def get_temp_file_path(args):
+    file_name, _ = os.path.splitext(os.path.basename(args.query_file_path))
+    storage_path = os.getenv('STORAGE_PATH', default='tmp_storage')
+    date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    temp_data_file = os.path.join(storage_path, f'{file_name}_{date_timestamp}.csv')
+    return temp_data_file
+
+
 def download_data(config: Configuration,
                   query_file_path: str,
                   data_file_path: str):
@@ -80,15 +88,7 @@ def download_data(config: Configuration,
     os.makedirs(os.path.dirname(data_file_path), exist_ok=True)
     with open(data_file_path, mode='w') as f:
         f.write(response.data.decode())
-    logger.info(f"Data saved to: {data_file_path}")  # Combined messages
-
-
-def get_temp_file_path(args):
-    file_name, _ = os.path.splitext(os.path.basename(args.query_file_path))
-    storage_path = os.getenv('STORAGE_PATH', default='tmp_storage')
-    date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    temp_data_file = os.path.join(storage_path, f'{file_name}_{date_timestamp}.csv')
-    return temp_data_file
+    logger.info(f"Data saved to temp file: {data_file_path}")  # Combined messages
 
 
 def upload_data(config: Configuration, data_file_path: str):
@@ -111,26 +111,28 @@ def upload_data(config: Configuration, data_file_path: str):
 
 def main():
     try:
-        logger.info("Application started.")
+        logger.info("Time Machine sample started.")
+
         args = parse_args()
         load_dotenv(dotenv_path='.env.time-machine', override=True)
         load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
 
-        temp_data_file = get_temp_file_path(args)
+        temp_data_file_path = get_temp_file_path(args)
 
-        download_data(api_config, args.query_file_path, temp_data_file)
+        download_data(api_config, args.query_file_path, temp_data_file_path)
 
-        if bool(os.getenv('UPLOAD_DATA', 'False')):
-            upload_data(api_config, temp_data_file)
+        upload_data(api_config, temp_data_file_path)
 
-        if not bool(os.getenv('KEEP_TEMP', 'True')):
-            os.remove(temp_data_file)
+        # removing temporary created file
+        if os.getenv('KEEP_TEMP_FILE', '').lower() != 'true':
+            os.remove(temp_data_file_path)
             logger.info(f"Temporary file removed.")
 
-        logger.info("Application completed.")
+        logger.info("Time machine sample completed.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
+
 
 if __name__ == '__main__':
     main()
