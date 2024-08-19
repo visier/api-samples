@@ -5,16 +5,16 @@
         "columns": [
           {
             "id": "employeeCount",
-            "columnName": "headcount"
+            "columnName": "HeadCount"
           },
           {
             "id": "resignationCount",
-            "columnName": "resignation_count",
+            "columnName": "ResignationCount",
             "qualifyingPath": "Employee_Exit.Employee"
           },
           {
             "id": "resignationRate",
-            "columnName": "resignation_rate",
+            "columnName": "ResignationRate",
             "qualifyingPath": "Employee_Exit.Employee"
           }
         ]
@@ -29,6 +29,17 @@
           },
           "levelIds": [
             "Gender"
+          ]
+        }
+      },
+      {
+        "dimensionLevelSelection": {
+          "dimension": {
+            "name": "JobLevel",
+            "qualifyingPath": "Employee"
+          },
+          "levelIds": [
+            "JobLevel"
           ]
         }
       }

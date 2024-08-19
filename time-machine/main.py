@@ -10,7 +10,6 @@ from visier.sdk.api.data_out import DataQueryApi, Configuration, ApiClient, Aggr
 
 
 def setup_logger() -> logging.Logger:
-    # turning off info logs for urllib3
     urllib3_logger = logging.getLogger("urllib3")
     urllib3_logger.setLevel(logging.WARNING)
 
@@ -75,11 +74,21 @@ def download_data(config: Configuration,
 
     logger.info(f"Executing query: {query_file_path}")  # Combined messages
     response = query_api.aggregate_without_preload_content(query_dto)
+    if not 200 <= response.status <= 299:
+        raise Exception(f"API request failed with status code {response.status}: {response.data.decode()}")
 
     os.makedirs(os.path.dirname(data_file_path), exist_ok=True)
     with open(data_file_path, mode='w') as f:
         f.write(response.data.decode())
     logger.info(f"Data saved to: {data_file_path}")  # Combined messages
+
+
+def get_temp_file_path(args):
+    file_name, _ = os.path.splitext(os.path.basename(args.query_file_path))
+    storage_path = os.getenv('STORAGE_PATH', default='tmp_storage')
+    date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    temp_data_file = os.path.join(storage_path, f'{file_name}_{date_timestamp}.csv')
+    return temp_data_file
 
 
 def upload_data(config: Configuration, data_file_path: str):
@@ -108,24 +117,20 @@ def main():
         load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
 
-        file_name, _ = os.path.splitext(os.path.basename(args.query_file_path))
-        storage_path = os.getenv('STORAGE_PATH', default='tmp_storage')
-        date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        temp_data_file = os.path.join(storage_path, f'{file_name}_{date_timestamp}.csv')
+        temp_data_file = get_temp_file_path(args)
 
         download_data(api_config, args.query_file_path, temp_data_file)
 
-        if os.getenv('UPLOAD_DATA'):
+        if bool(os.getenv('UPLOAD_DATA', 'False')):
             upload_data(api_config, temp_data_file)
 
-        if not os.getenv('KEEP_TEMP'):
+        if not bool(os.getenv('KEEP_TEMP', 'True')):
             os.remove(temp_data_file)
-            logger.info(f"Temporary file removed.")  # Added for clarity
+            logger.info(f"Temporary file removed.")
 
         logger.info("Application completed.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
-
 
 if __name__ == '__main__':
     main()
