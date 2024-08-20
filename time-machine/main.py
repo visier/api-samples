@@ -111,7 +111,7 @@ def upload_data(config: Configuration, data_file_path: str):
 
 def main():
     try:
-        logger.info("Time Machine sample started.")
+        logger.info("Time Machine started.")
 
         args = parse_args()
         load_dotenv(dotenv_path='.env.time-machine', override=True)
@@ -129,7 +129,7 @@ def main():
             os.remove(temp_data_file_path)
             logger.info(f"Temporary file removed.")
 
-        logger.info("Time machine sample completed.")
+        logger.info("Time Machine completed.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 

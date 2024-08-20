@@ -14,29 +14,25 @@ by data corrections at a specific point in time.
 
 The sample application comprises two steps:
 
-1. Downloading the Current Data State:
+1. Downloading the current data state:
     - Use the Data Query API to download the current data state and save it in a temporary CSV file.
     - An aggregate query stored in a JSON file is required for this step. A sample query is located in
-      ./queries/gender-resignation-joblevel.json.
+      [./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json).
 
 2. Uploading this csv file using Data Upload API:
     - Use the Data Upload API to upload the CSV file.
     - The Visier platform maps this data to a pre-created Overlay, which will be used to access data as it was at a
       specific point in time.
 
-There is a sample of the aggregate query located
-in [./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json)
-
-To process the uploaded file, the Visier Platform requires the creation of a Source, Overlay, and Mapping from Source to
-Overlay.
+To process the uploaded file, the Visier Platform requires the creation of a Source, Overlay, and Mapping.
 Here are the instructions:
 
-1. Source: https://docs.visier.com/developer/Studio/data/sources/source-create.htm
-2. Overlay with simple properties:
-   https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm
-3. Mapping from Source to Overlay: https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm
+1. [Source creation](https://docs.visier.com/developer/Studio/data/sources/source-create.htm)
+2. [Overlay creation](https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm)
+3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
 
-Instead of manual creation for this sample there are two files which could be imported:
+Instead of manually creating the source, overlay, and mapping, you can import these pre-configured components from the
+provided files:
 
 1. [./import/WFF_d3m_source.zip](import%2FWFF_d3m_source.zip)- to import source.
    Instruction how to import source: https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm
@@ -70,15 +66,20 @@ The Overlay could be used to check what data was at a specific point in time.
 ### Setup
 
 1. Clone the repository to your local machine.
-2. Install the required packages:
    ```shell
+   git clone https://github.com/visier/api-samples
+   ```
+2. Got to the time-machine folder and install the required packages:
+   ```shell
+   cd time-machine
    pip install -r requirements.txt
    ```
-3. Configure your [.env.time-machine](.env.time-machine) file as it written there.
+3. Configure authentication within the  [.env.time-machine](.env.time-machine) file as instructed. Ensure the provided
+   credentials have the necessary permissions to utilize both the Data Query API and the Data Upload API.
 
 ### Running the script
 
-```python main.py -q /queries/gender-resignation-joblevel.json```
+```python3 main.py -q ./queries/gender-resignation-joblevel.json```
 
 The script generates temporary data files, which are removed by default. You can preserve them by setting
 KEEP_TEMP_FILE=true in your .env file.
