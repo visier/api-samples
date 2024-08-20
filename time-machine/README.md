@@ -6,7 +6,7 @@ Organizations frequently report HR metrics to external stakeholders and use them
 However, subsequent corrections to historical data can introduce discrepancies between the initially reported values and
 the current ones.
 
-This project addresses the challenge of maintaining data integrity for accurate historical reporting and analysis.
+This sample application addresses the challenge of maintaining data integrity for accurate historical reporting and analysis.
 It provides a solution to preserve original metric values, ensuring consistency and avoiding issues caused
 by data corrections at a specific point in time.
 
