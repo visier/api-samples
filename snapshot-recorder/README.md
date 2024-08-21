@@ -59,7 +59,7 @@ provided files:
    to [import](https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm) source.
 2. [WFF_tenant_settings_data_category.zip](import%2FWFF_tenant_settings_data_category.zip) -
    to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) Tenant Settings
-   and Data Category. After importing, it should be released to enable assigning mapping to the data category when
+   and Data Category. After importing, it should be commited to enable assigning mapping to the data category when
    importing Overlay and Mapping data.
 3. [WFF_overlay_mapping.zip](import%2FWFF_overlay_mapping.zip) -
    to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) overlay, mapping.
