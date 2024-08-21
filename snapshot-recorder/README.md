@@ -1,4 +1,4 @@
-# Time Machine Sample Application
+# Snapshot Recorder Sample Application
 
 ## Overview
 
