@@ -55,12 +55,27 @@ def parse_args():
     return parsed_args
 
 
-def get_temp_file_path(args):
-    file_name, _ = os.path.splitext(os.path.basename(args.query_file_path))
-    storage_path = os.getenv('STORAGE_PATH', default='tmp_storage')
+def get_temp_file_path(temp_dir: str, query_file_path: str) -> (str, bool):
+    """Generates a temporary file path and optionally creates the directory.
+
+    Args:
+        temp_dir: The directory where the temporary file should be created.
+        query_file_path: The path to the original query file, used for naming.
+
+    Returns:
+        A tuple containing:
+            - The full path to the temporary file.
+            - A boolean indicating whether the `temp_dir` was created.
+    """
+
+    file_name, _ = os.path.splitext(os.path.basename(query_file_path))
     date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    temp_data_file = os.path.join(storage_path, f'{file_name}_{date_timestamp}.csv')
-    return temp_data_file
+    temp_data_file = os.path.join(temp_dir, f'{file_name}_{date_timestamp}.csv')
+    temp_dir_created = False
+    if not os.path.isdir(temp_dir):
+        os.makedirs(temp_dir)
+        temp_dir_created = True
+    return temp_data_file, temp_dir_created
 
 
 def download_data(config: Configuration,
@@ -104,8 +119,26 @@ def upload_data(config: Configuration, data_file_path: str):
         data = f.read()
 
     filename = os.path.basename(data_file_path)
-    logger.info(f"Uploading data: {filename}")  # Kept for visibility
+    logger.info(f"Uploading data: {data_file_path}")
     upload_api.v1_data_upload_files_filename_put(filename=filename, body=data)
+
+
+def delete_temp_file(temp_dir, temp_dir_created, temp_data_file_path):
+    """Deletes the temporary file and directory (if created).
+
+    Args:
+        temp_dir: The directory where the temporary file is located.
+        temp_dir_created: A boolean indicating whether `temp_dir` was created.
+        temp_data_file_path: The full path to the temporary file.
+    """
+    if os.getenv('KEEP_TEMP_FILE', '').lower() == 'true':
+        return
+
+    os.remove(temp_data_file_path)
+    logger.info(f"Temporary file removed.")
+    if temp_dir_created:
+        os.rmdir(temp_dir)
+        logger.info(f"Temporary directory removed.")
 
 
 def main():
@@ -117,24 +150,14 @@ def main():
         load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
 
-        # get temporary file and creating temp dir
-        temp_data_file_path = get_temp_file_path(args)
-        temp_dir = os.path.dirname(temp_data_file_path)
-        temp_dir_created = False
-        if not os.path.isdir(temp_dir):
-            os.makedirs(temp_dir)
-            temp_dir_created = True
+        temp_dir = os.getenv('TEMP_STORAGE_PATH', default='tmp_storage')
+        temp_data_file_path, temp_dir_created = get_temp_file_path(temp_dir, args.query_file_path)
 
         download_data(api_config, args.query_file_path, temp_data_file_path)
 
         upload_data(api_config, temp_data_file_path)
 
-        # removing temporary created file and dir if necessary
-        if os.getenv('KEEP_TEMP_FILE', '').lower() != 'true':
-            os.remove(temp_data_file_path)
-            logger.info(f"Temporary file removed.")
-            if temp_dir_created:
-                os.rmdir(temp_dir)
+        delete_temp_file(temp_dir, temp_dir_created, temp_data_file_path)
 
         logger.info("Snapshot recorder finished.")
     except Exception as e:
