@@ -48,7 +48,7 @@ def load_api_configuration() -> Configuration:
 
 def parse_args():
     logger.info(f"Parsing command line arguments: {sys.argv[1:]}.")  # Add arguments to log
-    parser = argparse.ArgumentParser(description="Time Machine sample.")
+    parser = argparse.ArgumentParser(description="Snapshot recorder sample.")
     parser.add_argument('-q', '--query_file_path', type=str, required=True,
                         help="File path to aggregate query definition.")
     parsed_args = parser.parse_args()
@@ -85,7 +85,6 @@ def download_data(config: Configuration,
     if not 200 <= response.status <= 299:
         raise Exception(f"API request failed with status code {response.status}: {response.data.decode()}")
 
-    os.makedirs(os.path.dirname(data_file_path), exist_ok=True)
     with open(data_file_path, mode='w') as f:
         f.write(response.data.decode())
     logger.info(f"Data saved to temp file: {data_file_path}")  # Combined messages
@@ -118,16 +117,24 @@ def main():
         load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
 
+        # get temporary file and creating temp dir
         temp_data_file_path = get_temp_file_path(args)
+        temp_dir = os.path.dirname(temp_data_file_path)
+        temp_dir_created = False
+        if not os.path.isdir(temp_dir):
+            os.makedirs(temp_dir)
+            temp_dir_created = True
 
         download_data(api_config, args.query_file_path, temp_data_file_path)
 
         upload_data(api_config, temp_data_file_path)
 
-        # removing temporary created file
+        # removing temporary created file and dir if necessary
         if os.getenv('KEEP_TEMP_FILE', '').lower() != 'true':
             os.remove(temp_data_file_path)
             logger.info(f"Temporary file removed.")
+            if temp_dir_created:
+                os.rmdir(temp_dir)
 
         logger.info("Snapshot recorder finished.")
     except Exception as e:

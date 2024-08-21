@@ -4,4 +4,4 @@ node_modules/
 .idea
 *.log
 /dv-export/python/query-changes/data
-/time-machine/tmp_storage/
+/snapshot-recorder/tmp_storage/
