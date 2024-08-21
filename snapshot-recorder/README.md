@@ -72,12 +72,12 @@ Python 3.8 or higher is required to run this sample application.
    ```shell
    git clone https://github.com/visier/api-samples
    ```
-2. Got to the time-machine folder and install the required packages:
+2. Go to the snapshot-recorder folder and install the required packages:
    ```shell
-   cd time-machine
+   cd snapshot-recorder
    pip install -r requirements.txt
    ```
-3. Configure authentication within the  [.env.time-machine](.env.time-machine) file as instructed. Ensure the provided
+3. Configure authentication within the  [.env.snapshot-recorder](.env.snapshot-recorder) file as instructed. Ensure the provided
    credentials have the necessary permissions to utilize both the Data Query API and the Data Upload API.
 
 ### Running the script
@@ -90,7 +90,7 @@ KEEP_TEMP_FILE=true in your .env file.
 ### MacOS `venv` Troubleshooting Tip:
 
 There is a known issue with SSL certificates when running Python apps in `venv` on MacOS.
-To fix it install `certifi` package and add `SSL_CERT_FILE` to the [.env.time-machine](.env.time-machine).
+To fix it install `certifi` package and add `SSL_CERT_FILE` to the [.env.snapshot-recorder](.env.snapshot-recorder).
 Replace {PYTHON_VERSION} with the version you are using.
 
 ```shell

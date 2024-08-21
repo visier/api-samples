@@ -157,7 +157,7 @@ def main() -> None:
         logger.info("Snapshot recorder started.")
 
         args = parse_args()
-        load_dotenv(dotenv_path='.env.time-machine', override=True)
+        load_dotenv(dotenv_path='.env.snapshot-recorder', override=True)
         load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
 
