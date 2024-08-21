@@ -24,22 +24,6 @@ The sample application comprises two steps:
     - The Visier platform maps this data to a pre-created Overlay, which will be used to access data as it was at a
       specific point in time.
 
-To process the uploaded file, the Visier Platform requires the creation of a Source, Overlay, and Mapping.
-Here are the instructions:
-
-1. [Source creation](https://docs.visier.com/developer/Studio/data/sources/source-create.htm)
-2. [Overlay creation](https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm)
-3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
-
-Instead of manually creating the source, overlay, and mapping, you can import these pre-configured components from the
-provided files:
-
-1. [./import/WFF_d3m_source.zip](import%2FWFF_d3m_source.zip)- to import source.
-   Instruction how to import source: https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm
-2. [./import/WFF_d3m_project.zip](import%2FWFF_d3m_project.zip) - to import tenant settings, data category, overlay,
-   mapping.
-   Instruction how to import project: https://docs.visier.com/developer/Studio/projects/projects-import-export.htm
-
 ## Usage
 
 To save data periodically, this application should be run using scheduling software like cron.
@@ -61,7 +45,26 @@ The Overlay retains all the uploaded snapshots which will enable historical anal
 
 ### Prerequisites
 
-- Python 3.8 or higher
+To process the uploaded file, the Visier Platform requires the creation of a Source, Overlay, and Mapping.
+Here are the instructions:
+
+1. [Source creation](https://docs.visier.com/developer/Studio/data/sources/source-create.htm)
+2. [Overlay creation](https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm)
+3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
+
+Instead of manually creating the source, overlay, and mapping, you can import these pre-configured components from the
+provided files:
+
+1. [WFF_source.zip](import%2FWFF_source.zip) -
+   to [import](https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm) source.
+2. [WFF_tenant_settings_data_category.zip](import%2FWFF_tenant_settings_data_category.zip) -
+   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) Tenant Settings
+   and Data Category. After importing, it should be released to enable assigning mapping to the data category when
+   importing Overlay and Mapping data.
+3. [WFF_overlay_mapping.zip](import%2FWFF_overlay_mapping.zip) -
+   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) overlay, mapping.
+
+Python 3.8 or higher is required to run this sample application.
 
 ### Setup
 
