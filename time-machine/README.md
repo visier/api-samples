@@ -57,7 +57,7 @@ This means that the sample should be run once a month. If it is necessary this i
 ```
 
 When run every month, this sample will upload the state of the data to the pre-created Overlay.
-The Overlay could be used to check what data was at a specific point in time.
+The Overlay retains all the uploaded snapshots which will enable historical analysis of the data as it was known at the time.
 
 ### Prerequisites
 
