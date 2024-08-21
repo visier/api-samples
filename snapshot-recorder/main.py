@@ -46,7 +46,7 @@ def load_api_configuration() -> Configuration:
     return config
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     logger.info(f"Parsing command line arguments: {sys.argv[1:]}.")  # Add arguments to log
     parser = argparse.ArgumentParser(description="Snapshot recorder sample.")
     parser.add_argument('-q', '--query_file_path', type=str, required=True,
@@ -55,32 +55,43 @@ def parse_args():
     return parsed_args
 
 
-def get_temp_file_path(temp_dir: str, query_file_path: str) -> (str, bool):
-    """Generates a temporary file path and optionally creates the directory.
+def ensure_temp_dir_exists(temp_dir: str) -> bool:
+    """Ensures the specified temporary directory exists, creating it if necessary.
 
     Args:
-        temp_dir: The directory where the temporary file should be created.
-        query_file_path: The path to the original query file, used for naming.
+        temp_dir: The directory to ensure exists.
 
     Returns:
-        A tuple containing:
-            - The full path to the temporary file.
-            - A boolean indicating whether the `temp_dir` was created.
+        A boolean indicating whether the `temp_dir` was created.
     """
 
-    file_name, _ = os.path.splitext(os.path.basename(query_file_path))
-    date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    temp_data_file = os.path.join(temp_dir, f'{file_name}_{date_timestamp}.csv')
     temp_dir_created = False
     if not os.path.isdir(temp_dir):
         os.makedirs(temp_dir)
         temp_dir_created = True
-    return temp_data_file, temp_dir_created
+    return temp_dir_created
+
+
+def get_temp_file_path(temp_dir: str, query_file_path: str) -> str:
+    """Generates a temporary file path within the specified directory.
+
+    Args:
+        temp_dir: The directory where the temporary file should be located.
+        query_file_path: The path to the original query file, used for naming.
+
+    Returns:
+        The full path to the temporary file (the file itself is not created).
+    """
+
+    file_name, _ = os.path.splitext(os.path.basename(query_file_path))
+    date_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    temp_file_path = os.path.join(temp_dir, f'{file_name}_{date_timestamp}.csv')
+    return temp_file_path
 
 
 def download_data(config: Configuration,
                   query_file_path: str,
-                  data_file_path: str):
+                  data_file_path: str) -> None:
     """
     Downloads metrics data and saves it to a file.
     Args:
@@ -105,7 +116,7 @@ def download_data(config: Configuration,
     logger.info(f"Data saved to temp file: {data_file_path}")  # Combined messages
 
 
-def upload_data(config: Configuration, data_file_path: str):
+def upload_data(config: Configuration, data_file_path: str) -> None:
     """
     Uploads data using the Data API.
     Args:
@@ -123,7 +134,7 @@ def upload_data(config: Configuration, data_file_path: str):
     upload_api.v1_data_upload_files_filename_put(filename=filename, body=data)
 
 
-def delete_temp_file(temp_dir, temp_dir_created, temp_data_file_path):
+def clean_temp_dir(temp_dir: str, temp_dir_created: bool, temp_data_file_path: str) -> None:
     """Deletes the temporary file and directory (if created).
 
     Args:
@@ -135,13 +146,13 @@ def delete_temp_file(temp_dir, temp_dir_created, temp_data_file_path):
         return
 
     os.remove(temp_data_file_path)
-    logger.info(f"Temporary file removed.")
+    logger.info(f"Temporary file {temp_data_file_path} removed.")
     if temp_dir_created:
         os.rmdir(temp_dir)
-        logger.info(f"Temporary directory removed.")
+        logger.info(f"Temporary directory {temp_dir} removed.")
 
 
-def main():
+def main() -> None:
     try:
         logger.info("Snapshot recorder started.")
 
@@ -151,13 +162,14 @@ def main():
         api_config = load_api_configuration()
 
         temp_dir = os.getenv('TEMP_STORAGE_PATH', default='tmp_storage')
-        temp_data_file_path, temp_dir_created = get_temp_file_path(temp_dir, args.query_file_path)
+        temp_dir_created = ensure_temp_dir_exists(temp_dir)
+        temp_data_file_path = get_temp_file_path(temp_dir, args.query_file_path)
 
         download_data(api_config, args.query_file_path, temp_data_file_path)
 
         upload_data(api_config, temp_data_file_path)
 
-        delete_temp_file(temp_dir, temp_dir_created, temp_data_file_path)
+        clean_temp_dir(temp_dir, temp_dir_created, temp_data_file_path)
 
         logger.info("Snapshot recorder finished.")
     except Exception as e:
