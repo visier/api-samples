@@ -45,24 +45,25 @@ The Overlay retains all the uploaded snapshots which will enable historical anal
 
 ### Prerequisites
 
+Ensure that the user has the required permissions to access both the Data Query API and the Data Upload API, as well as
+to authenticate using the method you configured.
 To process the uploaded file, the Visier Platform requires the creation of a Source, Overlay, and Mapping.
+To analyze the data, metrics should be created.
+
 Here are the instructions:
 
 1. [Source creation](https://docs.visier.com/developer/Studio/data/sources/source-create.htm)
 2. [Overlay creation](https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm)
 3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
+4. [Metrics creation](https://docs.visier.com/developer/Analytic%20Model/metrics/metrics-create.htm)
 
-Instead of manually creating the source, overlay, and mapping, you can import these pre-configured components from the
+Instead of manually creating the source, overlay, mapping, and metrics, you can import these pre-configured components from the
 provided files:
 
 1. [WFF_source.zip](import%2FWFF_source.zip) -
    to [import](https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm) source.
-2. [WFF_tenant_settings_data_category.zip](import%2FWFF_tenant_settings_data_category.zip) -
-   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) Tenant Settings
-   and Data Category. After importing, it should be commited to enable assigning mapping to the data category when
-   importing Overlay and Mapping data.
-3. [WFF_overlay_mapping.zip](import%2FWFF_overlay_mapping.zip) -
-   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) overlay, mapping.
+2. [WFF_overlay_mapping_metrics.zip](import%2FWFF_overlay_mapping_metrics.zip) -
+   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) overlay, mapping, metrics.
 
 Python 3.8 or higher is required to run this sample application.
 
@@ -82,10 +83,16 @@ Python 3.8 or higher is required to run this sample application.
 
 ### Running the script
 
-```python3 main.py -q ./queries/gender-resignation-joblevel.json```
+```shell
+python3 main.py -q ./queries/gender-resignation-joblevel.json
+```
 
 The script generates temporary data files, which are removed by default. You can preserve them by setting
 KEEP_TEMP_FILE=true in your .env file.
+
+Ensure that the Data Category release behavior is set to use the latest data version.
+After uploading the file, you need to [run a job](https://docs.visier.com/developer/Studio/data/jobs/jobs-run.htm) to
+generate a new Data Version.
 
 ### MacOS `venv` Troubleshooting Tip:
 
@@ -97,4 +104,6 @@ Replace {PYTHON_VERSION} with the version you are using.
 pip install certifi
 ```
 
-`SSL_CERT_FILE='../.venv/lib/python{PYTHON_VERSION}/site-packages/certifi/cacert.pem'`
+```
+SSL_CERT_FILE='../.venv/lib/python{PYTHON_VERSION}/site-packages/certifi/cacert.pem'
+```
