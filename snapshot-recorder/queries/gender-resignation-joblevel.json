@@ -11,11 +11,6 @@
             "id": "resignationCount",
             "columnName": "ResignationCount",
             "qualifyingPath": "Employee_Exit.Employee"
-          },
-          {
-            "id": "resignationRate",
-            "columnName": "ResignationRate",
-            "qualifyingPath": "Employee_Exit.Employee"
           }
         ]
       }
