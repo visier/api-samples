@@ -1,6 +1,6 @@
 # DV Export Script
 This script provides an example for using the Visier Data Version Export API through the
-[Visier Python Connector](https://github.com/visier/connector-python) to export and process data versions from Visier.
+[Visier Python Connector](https://github.com/visier/connector-python) to export and process data versions from Visier. For more information about the Data Version Export API, see [Data Version Export API](https://docs.visier.com/developer/apis/data-out/data-version-export/data-version-export-api.htm).
 
 ## Getting Started
 ### Environment
@@ -24,7 +24,7 @@ Use a new or empty directory, not a shared directory like `~/Downloads/`. The sc
 does not exist at the provided location.
 
 ### Visier user configuration
-See https://github.com/visier/connector-python for more details on authentication through the Visier Python Connector.
+For more information about authentication with the Visier Python Connector, see [Visier Python Connector](https://github.com/visier/connector-python).
 
 In addition to the capabilities mentioned above, the user will need:
 - The `Manage Jobs` capability to be able to schedule DV export jobs. 
