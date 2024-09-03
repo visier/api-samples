@@ -4,9 +4,10 @@ The Query Data Version (DV) Changes sample application uses Visier APIs to fetch
 
 ## Overview
 
-Let’s say we want to maintain a database that restates all changes every time an analytic object changes in Visier. We can use the Data Version Export APIs to retrieve the changes between two data versions in a Visier tenant, which allows us to identify objects that changed and the changes that occurred. However, the DV Export API doesn't retrieve changes to calculated fields, like calculated properties. To get the full change history of all attributes including calculated fields, we can use the Data Query APIs to retrieve specific attributes with their full history that weren't retrieved by the DV Export API. After we have all attributes using both APIs, we can then create a table that saves all received data in a database. 
+Let’s say we want to maintain a database that restates all changes every time an analytic object changes in Visier. We can use the Data Version Export API to retrieve the changes between two data versions in a Visier tenant, which allows us to identify objects that changed and the changes that occurred. However, the DV Export API doesn't retrieve changes to calculated fields, like calculated properties. To get the full change history of all attributes including calculated fields, we can use the Data Query API to retrieve specific attributes with their full history that weren't retrieved by the DV Export API. After we have all attributes using both APIs, we can then create a table that saves all received data in a database. For more information about the Visier APIs in this sample application, see [Data Version Export API](https://docs.visier.com/developer/apis/data-out/data-version-export/data-version-export-api.htm) and [Data Query API](https://docs.visier.com/developer/apis/data-out/data-query/data-query-api.htm).
 
 Diagram of the application flow:
+
 <img src="/assets/images/data-version-query-history.png" alt="Data Version Query History Diagram" width="700"/>
 
 The application performs the following operations:
