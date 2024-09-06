@@ -5,9 +5,9 @@ import sys
 from datetime import datetime
 
 from dotenv import load_dotenv
-from visier.sdk.api.core import Configuration, ApiClient
-from visier.sdk.api.data_in import DataUploadApi
-from visier.sdk.api.data_out import DataQueryApi, AggregationQueryExecutionDTO
+from visier_api_core import Configuration, ApiClient
+from visier_api_data_in import DataUploadApi
+from visier_api_data_out import DataQueryApi, AggregationQueryExecutionDTO
 
 
 def setup_logger() -> logging.Logger:
@@ -167,7 +167,7 @@ def main() -> None:
         temp_data_file_path = get_temp_file_path(temp_dir, args.query_file_path)
 
         download_data(api_config, args.query_file_path, temp_data_file_path)
-
+        exit(1)
         upload_data(api_config, temp_data_file_path)
 
         clean_temp_dir(temp_dir, temp_dir_created, temp_data_file_path)
