@@ -167,7 +167,7 @@ def main() -> None:
         temp_data_file_path = get_temp_file_path(temp_dir, args.query_file_path)
 
         download_data(api_config, args.query_file_path, temp_data_file_path)
-        exit(1)
+
         upload_data(api_config, temp_data_file_path)
 
         clean_temp_dir(temp_dir, temp_dir_created, temp_data_file_path)
