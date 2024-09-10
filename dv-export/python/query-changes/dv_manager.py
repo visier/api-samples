@@ -2,7 +2,7 @@ import io
 import logging
 import os
 import time
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import pandas as pd
 from visier_api_data_out import DataVersionExportApi, DataVersionExportDataVersionsDTO, \
@@ -59,7 +59,7 @@ class DVManager:
         logger.info(f"Export data versions time period: {base_dv_time} - {dv_time}.")
         return base_dv_time, dv_time
 
-    def execute_export_job(self, base_data_version: int, data_version: int) -> str | None:
+    def execute_export_job(self, base_data_version: int, data_version: int) -> Optional[str]:
         """Run a DV export job, wait for it to complete, and then return the export UUID."""
 
         schedule_request = DataVersionExportScheduleJobRequestDTO(

@@ -2,7 +2,7 @@ import logging
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Set, List
+from typing import Any, Dict, Set, List, Optional
 
 import math
 from visier_api_analytic_model import AnalyticObjectDTO, PropertiesDTO
@@ -53,7 +53,7 @@ class CommandHandler:
         """Retrieve the list of DVs available to export."""
         return self.dv_manager.get_data_versions()
 
-    def execute_export_job(self, base_data_version: int, data_version: int) -> str | None:
+    def execute_export_job(self, base_data_version: int, data_version: int) -> Optional[str]:
         """Run a DV export job, wait for it to complete, and then return the export UUID."""
         return self.dv_manager.execute_export_job(base_data_version, data_version)
 
@@ -136,7 +136,7 @@ class CommandHandler:
         return set(property_values)
 
     @staticmethod
-    def _get_filter_name(query: Dict[str, Any]) -> str | None:
+    def _get_filter_name(query: Dict[str, Any]) -> Optional[str]:
         filters = query.get(FILTERS, [{}])
         member_set = filters[0].get(MEMBER_SET, {})
         values = member_set.get(VALUES, {})
