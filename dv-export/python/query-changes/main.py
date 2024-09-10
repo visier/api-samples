@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
                         help="Extraction mode:\n"
                              "restate: fetch the full history for an analytic object.\n"
                              "last: fetch only the last change for an analytic object.",
-                        required=True)
+                        required=False)
 
     parsed_args = parser.parse_args()
     logger.info("Arguments parsed. %s", ", ".join(f"{arg}: {value}" for arg, value in vars(parsed_args).items()))
@@ -68,12 +68,15 @@ def parse_args() -> argparse.Namespace:
     if not parsed_args.query_path:
         raise Exception("Query path is required.")
 
+    if not parsed_args.data_version:
+        raise Exception("At least one of data_version or export_uuid must be provided.")
+
     if parsed_args.export_uuid:
         logger.info("Export UUID provided. Will not schedule a DV export job.")
         return parsed_args
 
-    if not parsed_args.data_version:
-        raise Exception("At least one of data_version or export_uuid must be provided.")
+    if not parsed_args.mode:
+        raise Exception("Extraction mode is required.")
 
     return parsed_args
 
@@ -134,8 +137,8 @@ def main() -> None:
 
     # List available data versions for export
     if args.list_dv:
-        data_versions = command_handler.get_data_versions()
-        logger.info(f"Data versions fetched successfully:\n {json.dumps(data_versions, indent=2)}")
+        data_versions_dto = command_handler.get_data_versions()
+        logger.info(f"Data versions fetched successfully:\n {data_versions_dto.model_dump_json(indent=2)}")
         return
 
     # If export_uuid is not provided, execute a DV export job
