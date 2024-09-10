@@ -3,6 +3,9 @@ import time
 from enum import Enum
 from typing import Any, Tuple
 
+from visier_api_analytic_model import AnalyticObjectDTO
+from visier_api_data_out import GoogleProtobufAny
+
 from change_fetcher import ChangeFetcher
 from constants import *
 from data_store import DataStore
@@ -49,34 +52,44 @@ class CommandHandler:
 
     def process_query(self, export_uuid: str, query: dict[str, Any], extraction_mode: ExtractionMode):
         """Process the query using filtering and save changes to the database."""
-        analytic_object = query[SOURCE][ANALYTIC_OBJECT]
-        logger.info(f"Analytic object to fetch changes: {analytic_object}")
+        analytic_object_name = query[SOURCE][ANALYTIC_OBJECT]
+        logger.info(f"Analytic object to fetch changes: {analytic_object_name}")
 
         # Retrieve filter from query
         filter_name = self._get_filter_name(query)
-        filter_values = self._read_filter_values(export_uuid, analytic_object, filter_name) if filter_name else None
+        filter_values = self._read_filter_values(export_uuid, analytic_object_name,
+                                                 filter_name) if filter_name else None
 
         # Retrieve analytic object changes
-        analytic_object_metadata, properties = self.change_fetcher.get_analytic_object_metadata(analytic_object)
+        analytic_object_dto, properties_dto = self.change_fetcher.get_analytic_object_metadata(analytic_object_name)
 
         # Getting start and end for query changes depending on command mode
         start_time_epoch, end_time_epoch = self._get_time_period_borders(export_uuid,
-                                                                         analytic_object_metadata,
+                                                                         analytic_object_dto,
                                                                          extraction_mode)
 
         # Fetch analytic object changes
-        change_rows = self.change_fetcher.execute_query_list(query, start_time_epoch, end_time_epoch,
-                                                             self.record_modes[extraction_mode], filter_values)
+        protobuf_changes = self.change_fetcher.execute_query_list(query,
+                                                                  start_time_epoch,
+                                                                  end_time_epoch,
+                                                                  self.record_modes[extraction_mode],
+                                                                  filter_values)
 
         # Save changes to the database
-        self._save_to_db(analytic_object, filter_name, filter_values, query, properties, change_rows, extraction_mode)
+        self._save_to_db(analytic_object_name,
+                         filter_name,
+                         filter_values,
+                         query,
+                         properties_dto,
+                         protobuf_changes,
+                         extraction_mode)
 
-    def _get_time_period_borders(self, export_uuid: str, analytic_object_metadata: dict[str, Any],
+    def _get_time_period_borders(self, export_uuid: str, analytic_object_dto: AnalyticObjectDTO,
                                  extraction_mode: ExtractionMode) -> Tuple[int, int]:
         if extraction_mode == ExtractionMode.LAST:
             start_time_epoch, end_time_epoch = self.dv_manager.get_export_data_version_times(export_uuid)
         elif extraction_mode == ExtractionMode.RESTATE:
-            start_time_epoch, end_time_epoch = int(analytic_object_metadata[DATA_START_DATE]), int(time.time() * 1000)
+            start_time_epoch, end_time_epoch = int(analytic_object_dto.data_start_date), int(time.time() * 1000)
         else:
             raise ValueError(f"Unknown command mode: {extraction_mode}")
         return start_time_epoch, end_time_epoch
@@ -105,13 +118,14 @@ class CommandHandler:
                     filter_name,
                     filter_values,
                     query,
-                    properties,
-                    change_rows,
+                    properties_dto,
+                    protobuf_changes: list[GoogleProtobufAny],
                     extraction_mode: ExtractionMode):
         """Create table if it does not exist and restate or append changes to the table."""
+
         if not self.data_store.table_exists(analytic_object):
-            self.data_store.create_table(analytic_object, query[COLUMNS], properties)
+            self.data_store.create_table(analytic_object, query[COLUMNS], properties_dto)
         elif extraction_mode == ExtractionMode.RESTATE:
             self.data_store.delete_rows(analytic_object, filter_name, filter_values)
 
-        self.data_store.save_to_db(analytic_object, change_rows)
+        self.data_store.save_to_db(analytic_object, protobuf_changes)

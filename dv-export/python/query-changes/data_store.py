@@ -1,9 +1,10 @@
 import logging
-from typing import Any
 
 from sqlalchemy import String, Float, Integer, BigInteger, Boolean, insert, create_engine, Column, Table, MetaData
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
+from visier_api_analytic_model import PropertiesDTO
+from visier_api_data_out import GoogleProtobufAny
 
 from constants import *
 
@@ -44,23 +45,23 @@ class DataStore:
             session.commit()
             logger.info(f"Deleted {result.rowcount} rows from table {table_name}.")
 
-    def create_table(self, analytic_object: str, query_columns: dict, properties: list[dict[str, Any]]) -> None:
+    def create_table(self, analytic_object_name: str, query_columns: dict, properties_dto: PropertiesDTO) -> None:
         """Creates a table in the database based on the query and table columns."""
-        properties_dict = {prop[ID]: prop for prop in properties}
+        properties_dict = {prop.id: prop for prop in properties_dto.properties}
         columns: list[Column] = []
         for query_column in query_columns:
             prop = properties_dict.get(query_column[COLUMN_DEFINITION][PROPERTY][NAME])
             if prop is None:
                 logger.warning(f"Property not found for column {query_column}.")
                 continue
-            column: Column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[prop[PRIMITIVE_DATA_TYPE]])
+            column: Column = Column(query_column[COLUMN_NAME], self.VISIER_TO_SQL_TYPES[prop.primitive_data_type])
             columns.append(column)
 
-        Table(analytic_object, self.metadata, *columns)
+        Table(analytic_object_name, self.metadata, *columns)
         self.metadata.create_all(self.engine)
-        logger.info(f"Created table {analytic_object}.")
+        logger.info(f"Created table {analytic_object_name}.")
 
-    def save_to_db(self, table_name: str, rows: list[list], chunk_size: int = 1000) -> None:
+    def save_to_db(self, table_name: str, protobuf_changes: list[GoogleProtobufAny], chunk_size: int = 1000) -> None:
         """Saves a list of rows to the database in chunks."""
         with self.session_make() as session:
             table = self.metadata.tables[table_name]
@@ -68,7 +69,8 @@ class DataStore:
 
             # Convert the list of rows into a list of dictionaries
             columns = table.columns.keys()
-            data = [dict(zip(columns, row)) for row in rows]
+            data = [dict(zip(columns, [v for _, v in sorted(change.to_dict().items(), key=lambda x: int(x[0]))]))
+                    for change in protobuf_changes]
 
             # Insert data in chunks
             for i in range(0, len(data), chunk_size):

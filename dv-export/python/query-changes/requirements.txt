@@ -2,4 +2,5 @@ pandas>=2.2.2
 python-dotenv>=1.0.1
 SQLAlchemy>=2.0.29
 sqlalchemy_utils>=0.40.0
-visier_connector>=0.9.18
+visier_api_analytic_model>=0.9.18
+visier_api_data_out>=0.9.18
