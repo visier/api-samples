@@ -2,7 +2,7 @@ import io
 import logging
 import os
 import time
-from typing import Tuple
+from typing import Tuple, List
 
 import pandas as pd
 from visier_api_data_out import DataVersionExportApi, DataVersionExportDataVersionsDTO, \
@@ -35,6 +35,11 @@ class DVManager:
         """Retrieve a list of the data versions available to export."""
 
         export_metadata = self.dv_api.get_export(export_uuid)
+        if (export_metadata is None
+                or export_metadata.data_version_exports is None
+                or len(export_metadata.data_version_exports) == 0):
+            raise Exception(f"Export {export_uuid} has no data versions.")
+
         base_dv_meta = export_metadata.data_version_exports[0].base_data_version_number
         dv_meta = export_metadata.data_version_exports[0].data_version_number
         dv_dto = self.get_data_versions()
@@ -54,7 +59,7 @@ class DVManager:
         logger.info(f"Export data versions time period: {base_dv_time} - {dv_time}.")
         return base_dv_time, dv_time
 
-    def execute_export_job(self, base_data_version: int, data_version: int) -> str:
+    def execute_export_job(self, base_data_version: int, data_version: int) -> str | None:
         """Run a DV export job, wait for it to complete, and then return the export UUID."""
 
         schedule_request = DataVersionExportScheduleJobRequestDTO(
@@ -83,11 +88,11 @@ class DVManager:
     def read_property_values(self,
                              export_uuid: str,
                              analytic_object: str,
-                             property_name: str) -> list[str]:
+                             property_name: str) -> List[str]:
         """Read the changed values from the export files."""
         export_table = self._get_table_metadata(export_uuid, analytic_object)
         export_files = export_table.common_columns.files + export_table.new_columns.files
-        all_values: list[str] = []
+        all_values: List[str] = []
         for export_file in export_files:
             file_id = export_file.file_id
             file_name = export_file.filename
@@ -111,12 +116,10 @@ class DVManager:
 
     def _get_table_metadata(self, export_uuid: str, table_name: str) -> DataVersionExportTableDTO:
         """Retrieve information about a table in a DV export."""
-
         # TODO replace with get_export() when the API is fixed
         response = self.dv_api.get_export_without_preload_content(export_uuid)
         if response.status != 200:
             raise Exception(f"Failed to get export {export_uuid}: {response}.")
-
         dv_export_dto = DataVersionExportDTO.from_json(response.data.decode('utf-8'))
         tables = dv_export_dto.tables
         table = next((t for t in tables if t.name == table_name), None)
