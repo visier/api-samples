@@ -119,7 +119,6 @@ class DVManager:
         return table
 
     def _get_export_data_version(self, export_uuid):
-        # TODO replace with get_export() when the API is fixed
         response = self.dv_api.get_export_without_preload_content(export_uuid)
         if response.status != 200:
             raise Exception(f"Failed to get export {export_uuid}: {response}.")
