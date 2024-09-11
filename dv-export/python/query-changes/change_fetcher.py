@@ -1,13 +1,8 @@
-import copy
 import logging
-import math
-from datetime import datetime
-from typing import Optional, Any
+from typing import List, Tuple
 
-from visier.api import ModelApiClient, QueryApiClient
-from visier.connector import VisierSession
-
-from constants import *
+from visier_api_analytic_model import DataModelApi, AnalyticObjectDTO, PropertiesDTO, PropertyDTO
+from visier_api_data_out import DataQueryApi, ListQueryExecutionDTO, GoogleProtobufAny
 
 logger = logging.getLogger(__name__)
 
@@ -15,118 +10,75 @@ logger = logging.getLogger(__name__)
 class ChangeFetcher:
     """Fetches all changes that are defined for a given analytic object."""
 
-    DEFAULT_QUERY_LIMIT = 100000
-
     # Additional properties to fetch for different object types.
     additional_properties = {
         "SUBJECT": [
-            {
-                'id': 'ValidityStart',
-                'displayName': 'ValidityStart',
-                'description': 'Start time of data validity.',
-                'dataType': 'Date',
-                'primitiveDataType': 'Date'
-            },
-            {
-                'id': 'ValidityEnd',
-                'displayName': 'ValidityEnd',
-                'description': 'End time of data validity.',
-                'dataType': 'Date',
-                'primitiveDataType': 'Date'
-            },
+            PropertyDTO(
+                id='ValidityStart',
+                displayName='ValidityStart',
+                description='Start time of data validity.',
+                dataType='Date', primitiveDataType='Date'
+            ),
+            PropertyDTO(
+                id='ValidityEnd',
+                displayName='ValidityEnd',
+                description='End time of data validity.',
+                dataType='Date',
+                primitiveDataType='Date'
+            ),
         ],
         "EVENT": [
-            {
-                'id': 'EventDate',
-                'displayName': 'EventDate',
-                'description': 'Event occurred time.',
-                'dataType': 'Date',
-                'primitiveDataType': 'Date'
-            }
+            PropertyDTO(
+                id='EventDate',
+                displayName='EventDate',
+                description='Event occurred time.',
+                dataType='Date',
+                primitiveDataType='Date'
+            )
         ]
     }
 
-    def __init__(self, session: VisierSession):
-        self.model_client = ModelApiClient(session, raise_on_error=True)
-        self.query_client = QueryApiClient(session, raise_on_error=True)
+    def __init__(self, model_api: DataModelApi, query_api: DataQueryApi):
+        self.model_api = model_api
+        self.query_api = query_api
 
-    def execute_query_list(self,
-                           query_orig: dict[str, Any],
-                           start_date_epoch: int,
-                           end_data_epoch: int,
-                           record_mode: str,
-                           filter_values: Optional[set[str]] = None) -> list[list[str]]:
+    def execute_query_list(self, list_query_dto: ListQueryExecutionDTO) -> List[GoogleProtobufAny]:
         """Execute a query to list changes for a given analytic object."""
-        time_interval = self._get_time_interval(start_date_epoch, end_data_epoch)
-        query_updated = self._prepare_query(query_orig, time_interval, record_mode, filter_values)
-        changes = self._fetch_data_with_pagination(query_updated)
-        return changes
-
-    def get_analytic_object_metadata(self, analytic_object_name: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        analytic_object_response = self.model_client.get_analytic_objects([analytic_object_name])
-        analytic_object_metadata = analytic_object_response.json()[ANALYTIC_OBJECTS][0]
-        properties = self.model_client.get_properties(analytic_object_name).json()[PROPERTIES]
-        self._append_additional_properties(properties, analytic_object_metadata)
-        return analytic_object_metadata, properties
-
-    def _prepare_query(self,
-                       query_orig: dict[str, Any],
-                       time_interval: dict[str, Any],
-                       record_mode: str = NORMAL,
-                       filter_values: Optional[set[str]] = None) -> dict[str, Any]:
-        query = copy.deepcopy(query_orig)
-        if OPTIONS not in query:
-            query[OPTIONS] = {}
-        query[OPTIONS][RECORD_MODE] = record_mode
-        if filter_values is not None:
-            logger.info(f"List changes for unique filter: {len(filter_values)}.")
-            query[FILTERS][0][MEMBER_SET][VALUES][INCLUDED] = [
-                {PATH: [filter_value]} for filter_value in filter_values
-            ]
-        else:
-            logger.info(f"List changes without filters.")
-        query[TIME_INTERVAL] = time_interval
-        if query[OPTIONS].get(LIMIT) is None:
-            query[OPTIONS][LIMIT] = self.DEFAULT_QUERY_LIMIT
-        return query
-
-    def _fetch_data_with_pagination(self, query: dict[str, Any]) -> list[list[str]]:
-        limit = query[OPTIONS][LIMIT]
+        limit = list_query_dto.options.limit
         page_num = 0
-        all_rows = []
+        all_rows: List[GoogleProtobufAny] = []
         while True:
-            query[OPTIONS][PAGE] = page_num
-            result_table = self.query_client.list(query)
-            rows = list(result_table.rows())
-            logger.info(f"Batch changes for {query[SOURCE]} fetched page: {page_num}, rows: {len(rows)}.")
-            all_rows.extend(rows)
-            if len(rows) < limit:
+            list_query_dto.options.page = page_num
+            list_response = self.query_api.list(list_query_dto)
+            if list_response is None:
+                logger.info(f"No changes found for source: {list_query_dto.source}.")
+                return all_rows
+
+            logger.info(f"Batch changes for source: {list_query_dto.source},"
+                        f" fetched page: {page_num}, rows: {len(list_response.rows)}.")
+            all_rows.extend(list_response.rows)
+
+            # If the number of rows is less than the limit, then we have fetched all changes.
+            if len(list_response.rows) < limit:
                 break
             page_num += 1
-        logger.info(f"Full changes for {query[SOURCE]} fetched rows: {len(all_rows)}.")
+        logger.info(f"Full changes for {list_query_dto.source} fetched rows: {len(all_rows)}.")
         return all_rows
 
-    def _append_additional_properties(self, properties: list[dict[str, Any]], analytic_object: dict[str, Any]) -> None:
-        object_type = analytic_object.get(TYPE)
-        additional_props = self.additional_properties.get(object_type, [])
-        for prop in additional_props:
-            property_updated = prop.copy()
-            property_updated[ID] = f"{analytic_object[ID]}.{prop[ID]}"
-            properties.append(property_updated)
+    def get_analytic_object_metadata(self, analytic_object_name: str) -> Tuple[AnalyticObjectDTO, PropertiesDTO]:
+        analytic_object_dto = self.model_api.analytic_object(analytic_object_name)
+        properties_dto = self.model_api.properties(analytic_object_name)
+        self._append_additional_properties(properties_dto, analytic_object_dto)
+        return analytic_object_dto, properties_dto
 
-    @staticmethod
-    def _get_time_interval(start_date_epoch: int, end_date_epoch: int) -> dict[str, Any]:
-        """Retrieve the time range from timestamp until UTC now."""
-        start_date = datetime.utcfromtimestamp(start_date_epoch / 1000)
-        end_date = datetime.utcfromtimestamp(end_date_epoch / 1000)
+    def _append_additional_properties(self,
+                                      properties_dto: PropertiesDTO,
+                                      analytic_object_dto: AnalyticObjectDTO) -> None:
+        additional_props = self.additional_properties.get(analytic_object_dto.type, [])
+        existing_property_ids = {prop.id for prop in properties_dto.properties}
 
-        diff_days = math.ceil((end_date - start_date).total_seconds() / 86400)
-        logger.info("Time period to fetch: "
-                    f"{start_date_epoch} ({start_date}) - {end_date_epoch} ({end_date}). "
-                    f"Days: {diff_days}.")
-        return {
-            FROM_INSTANT: end_date_epoch,
-            INTERVAL_PERIOD_TYPE: DAY,
-            INTERVAL_PERIOD_COUNT: diff_days,
-            DIRECTION: BACKWARD
-        }
+        for additional_prop_orig in additional_props:
+            additional_prop = additional_prop_orig.model_copy()
+            additional_prop.id = f"{analytic_object_dto.id}.{additional_prop.id}"
+            if additional_prop.id not in existing_property_ids:
+                properties_dto.properties.append(additional_prop)

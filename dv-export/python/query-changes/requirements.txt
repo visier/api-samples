@@ -2,4 +2,6 @@ pandas>=2.2.2
 python-dotenv>=1.0.1
 SQLAlchemy>=2.0.29
 sqlalchemy_utils>=0.40.0
-visier_connector>=0.9.18
+psycopg2>=2.9.3
+visier-api-analytic-model>=22222222.99201.1474
+visier-api-data-out>=22222222.99201.1474

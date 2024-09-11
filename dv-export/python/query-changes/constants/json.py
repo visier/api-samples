@@ -1,0 +1,12 @@
+# DTOs keys and values for manipulating with queries
+ANALYTIC_OBJECT = 'analyticObject'
+BACKWARD = 'BACKWARD'
+CHANGES = 'CHANGES'
+DAY = 'DAY'
+FILTERS = 'filters'
+INCLUDED = 'included'
+MEMBER_SET = 'memberSet'
+NORMAL = 'NORMAL'
+PATH = 'path'
+SOURCE = 'source'
+VALUES = 'values'

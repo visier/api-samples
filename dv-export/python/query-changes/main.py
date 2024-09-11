@@ -2,16 +2,16 @@ import argparse
 import json
 import logging
 import os
-import typing
-from collections import OrderedDict
-from typing import Any
+from typing import Any, Dict, List
 
 from dotenv import dotenv_values
-from visier.connector import make_auth, VisierSession
+from visier_api_analytic_model import DataModelApi
+from visier_api_core import Configuration, ApiClient
+from visier_api_data_out import DataVersionExportApi, DataQueryApi
 
 from change_fetcher import ChangeFetcher
 from command_handler import CommandHandler, ExtractionMode
-from constants import *
+from constants.config import *
 from data_store import DataStore
 from dv_manager import DVManager
 
@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
                         help="Extraction mode:\n"
                              "restate: fetch the full history for an analytic object.\n"
                              "last: fetch only the last change for an analytic object.",
-                        required=True)
+                        required=False)
 
     parsed_args = parser.parse_args()
     logger.info("Arguments parsed. %s", ", ".join(f"{arg}: {value}" for arg, value in vars(parsed_args).items()))
@@ -68,17 +68,20 @@ def parse_args() -> argparse.Namespace:
     if not parsed_args.query_path:
         raise Exception("Query path is required.")
 
+    if not parsed_args.data_version:
+        raise Exception("At least one of data_version or export_uuid must be provided.")
+
     if parsed_args.export_uuid:
         logger.info("Export UUID provided. Will not schedule a DV export job.")
         return parsed_args
 
-    if not parsed_args.data_version:
-        raise Exception("At least one of data_version or export_uuid must be provided.")
+    if not parsed_args.mode:
+        raise Exception("Extraction mode is required.")
 
     return parsed_args
 
 
-def load_config() -> dict[str, Any]:
+def load_config() -> Dict[str, Any]:
     config = {
         **dotenv_values('.env.query-changes'),
         **dotenv_values('.env.visier-auth'),
@@ -88,19 +91,36 @@ def load_config() -> dict[str, Any]:
     return config
 
 
-def create_command_handler(session: VisierSession, config: dict[str, Any]) -> CommandHandler:
+def create_command_handler(config: Dict[str, Any]) -> CommandHandler:
     """Create a CommandHandler instance with the provided session and configuration."""
-    dv_manager = DVManager(session,
+    api_config = Configuration(
+        host=config[VISIER_HOST],
+        api_key=config[VISIER_APIKEY],
+        username=config[VISIER_USERNAME],
+        password=config[VISIER_PASSWORD],
+        client_id=config[VISIER_CLIENT_ID],
+        client_secret=config[VISIER_CLIENT_SECRET],
+        redirect_uri=config[VISIER_REDIRECT_URI],
+        vanity=config[VISIER_VANITY])
+    api_client = ApiClient(api_config)
+
+    dv_api = DataVersionExportApi(api_client)
+    dv_manager = DVManager(dv_api,
                            bool(config[DV_SAVE_EXPORT_FILES_ON_DISK]),
-                           config[DV_EXPORT_FILES_PATH],
+                           config['DV_EXPORT_FILES_PATH'],
                            job_status_poll_interval_sec=int(config[DV_JOB_STATUS_POLL_INTERVAL_SECONDS]),
                            job_timeout_sec=int(config[DV_JOB_TIMEOUT_SECONDS]))
-    change_fetcher = ChangeFetcher(session)
-    data_store = DataStore(config[DB_URL])
+
+    model_api = DataModelApi(api_client)
+    query_api = DataQueryApi(api_client)
+    change_fetcher = ChangeFetcher(model_api, query_api)
+
+    data_store = DataStore(config['DB_URL'])
+
     return CommandHandler(dv_manager, change_fetcher, data_store)
 
 
-def get_query_files(path):
+def get_query_files(path: str) -> List[str]:
     if os.path.isfile(path):
         return [path]
     elif os.path.isdir(path):
@@ -113,24 +133,22 @@ def main() -> None:
     args = parse_args()
     config = load_config()
 
-    auth = make_auth(env_values=OrderedDict(config))
-    with VisierSession(auth) as session:
-        command_handler = create_command_handler(session, config)
+    command_handler = create_command_handler(config)
 
-        # List available data versions for export
-        if args.list_dv:
-            data_versions = command_handler.get_data_versions()
-            logger.info(f"Data versions fetched successfully:\n {json.dumps(data_versions, indent=2)}")
-            return
+    # List available data versions for export
+    if args.list_dv:
+        data_versions_dto = command_handler.get_data_versions()
+        logger.info(f"Data versions fetched successfully:\n {data_versions_dto.model_dump_json(indent=2)}")
+        return
 
-        # If export_uuid is not provided, execute a DV export job
-        export_uuid = args.export_uuid or command_handler.execute_export_job(args.base_data_version, args.data_version)
+    # If export_uuid is not provided, execute a DV export job
+    export_uuid = args.export_uuid or command_handler.execute_export_job(args.base_data_version, args.data_version)
 
-        # Load one or several query files and process them
-        for query_file in get_query_files(args.query_path):
-            with open(query_file, 'r') as f:
-                query = json.load(f)
-            command_handler.process_query(export_uuid, query, args.mode)
+    # Load one or several query files and process them
+    for query_file in get_query_files(args.query_path):
+        with open(query_file, 'r') as f:
+            query = json.load(f)
+        command_handler.process_query(export_uuid, query, args.mode)
 
 
 if __name__ == "__main__":

@@ -5,8 +5,9 @@ import sys
 from datetime import datetime
 
 from dotenv import load_dotenv
-from visier.sdk.api.data_in import DataUploadApi
-from visier.sdk.api.data_out import DataQueryApi, Configuration, ApiClient, AggregationQueryExecutionDTO
+from visier_api_core import Configuration, ApiClient
+from visier_api_data_in import DataUploadApi
+from visier_api_data_out import DataQueryApi, AggregationQueryExecutionDTO
 
 
 def setup_logger() -> logging.Logger:
