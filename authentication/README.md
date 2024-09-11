@@ -19,3 +19,4 @@ Some sample applications use libraries that read environment files. Libraries th
 ## Samples
 * [Authorization Code](oauth2-code)
 * [Password](oauth2-password)
+* [SAML](oauth2-saml)
