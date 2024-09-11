@@ -33,15 +33,9 @@ class DVManager:
 
     def get_export_data_version_times(self, export_uuid: str) -> Tuple[int, int]:
         """Retrieve a list of the data versions available to export."""
-
-        export_metadata = self.dv_api.get_export(export_uuid)
-        if (export_metadata is None
-                or export_metadata.data_version_exports is None
-                or len(export_metadata.data_version_exports) == 0):
-            raise Exception(f"Export {export_uuid} has no data versions.")
-
-        base_dv_meta = export_metadata.data_version_exports[0].base_data_version_number
-        dv_meta = export_metadata.data_version_exports[0].data_version_number
+        dv_export_dto = self._get_export_data_version(export_uuid)
+        base_dv_meta = dv_export_dto.base_data_version_number
+        dv_meta = dv_export_dto.data_version_number
         dv_dto = self.get_data_versions()
 
         base_data_version = None
@@ -116,13 +110,18 @@ class DVManager:
 
     def _get_table_metadata(self, export_uuid: str, table_name: str) -> DataVersionExportTableDTO:
         """Retrieve information about a table in a DV export."""
-        # TODO replace with get_export() when the API is fixed
-        response = self.dv_api.get_export_without_preload_content(export_uuid)
-        if response.status != 200:
-            raise Exception(f"Failed to get export {export_uuid}: {response}.")
-        dv_export_dto = DataVersionExportDTO.from_json(response.data.decode('utf-8'))
+        dv_export_dto = self._get_export_data_version(export_uuid)
+
         tables = dv_export_dto.tables
         table = next((t for t in tables if t.name == table_name), None)
         if table is None:
             raise Exception(f"Table {table_name} not found in export.")
         return table
+
+    def _get_export_data_version(self, export_uuid):
+        # TODO replace with get_export() when the API is fixed
+        response = self.dv_api.get_export_without_preload_content(export_uuid)
+        if response.status != 200:
+            raise Exception(f"Failed to get export {export_uuid}: {response}.")
+        dv_export_dto = DataVersionExportDTO.from_json(response.data.decode('utf-8'))
+        return dv_export_dto
