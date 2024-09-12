@@ -1,0 +1,4 @@
+pandas==2.2.2
+python-dotenv==1.0.1
+visier-api-data-out==0.99201.1476
+visier-api-data-in==0.99201.1476
