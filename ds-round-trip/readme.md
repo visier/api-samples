@@ -16,7 +16,7 @@ By leveraging this framework, organizations can customize their data pipeline an
 To get started with this example on your local machine, follow these steps:
 
 ### 1. Application Setup
-- Create a new column within your application as needed.
+- To ensure the predicted data can be loaded into the application, please ensure the non-id column is exist and unmapped.
 
 ### 2. Local Machine Setup
 1. **Install Python**  
@@ -30,7 +30,6 @@ To get started with this example on your local machine, follow these steps:
     ```bash
     pip install -r requirements.txt
     ```
-
 
 3. **Set Up Credentials**  
 Open the `.env` file and update it with your Visier API credentials to ensure successful API integration.
