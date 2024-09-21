@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "eu-pay-transparency"
+version = "0.1.0"
+description = ""
+authors = ["Kavan Chan <kavan.chan@visier.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "^2.0.0"
+jupyter = "^1.0.0"
+openpyxl = "^3.1.3"
+scikit-learn = "^1.5.0"
+python-dotenv = "^1.0.1"
+visier-api-data-in = "0.99201.1474"
+visier-api-data-out = "0.99201.1474"
+visier-connector = "^0.9.18"
+visier-api-analytic-model = "0.99201.1474"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
