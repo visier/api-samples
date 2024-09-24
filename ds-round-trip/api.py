@@ -67,16 +67,13 @@ class VisierApi:
         A function that compose a list execution DTO with provided analytic object, columns, and end time.
         Default is getting 1 month of data backward to the end date.
         """
-        _columns = []
-
-        if columns is not None:
-            _columns = [
-                PropertyColumnDTO(
-                    column_name=c["displayName"],
-                    column_definition=QueryPropertyDTO(formula=c["attribute"]),
-                )
-                for c in columns
-            ]
+        _columns = [
+            PropertyColumnDTO(
+                column_name=c["displayName"],
+                column_definition=QueryPropertyDTO(formula=c["attribute"]),
+            )
+            for c in columns
+        ] if columns else []
 
         return ListQueryExecutionDTO(
             columns=_columns,
