@@ -25,29 +25,29 @@ class Model:
     For more details, refer to the scikit-learn documentation: https://scikit-learn.org/stable/documentation.html
     """
 
-    def __init__(self):
-        self.pipeline: Pipeline | None = None
-        self.today: str = dt.datetime.today().strftime("%Y-%m-%d")
+    def __init__(self, feature: FeatureUnion | str):
+        self._pipeline = (
+            self._load(feature)
+            if isinstance(feature, str)
+            else self._define_pipeline(feature)
+        )
 
-    def __is_pipeline_defined(self) -> None:
-        if self.pipeline is None:
-            raise RuntimeError(
-                "pipeline is not defined, please either define or load a pipeline"
-            )
-
-    @staticmethod
-    def update_path_with_version(path: str, version: str) -> str:
-        _dir, basename = os.path.dirname(path), os.path.basename(path)
-        basename_without_ext, ext = os.path.splitext(basename)
-        return os.path.join(_dir, f"{basename_without_ext}.{version}{ext}")
+    def __getattr__(self, attr):
+        return getattr(self._pipeline, attr)
 
     @staticmethod
-    def create_dir_if_not_exists(path: str) -> None:
+    def _load(path: str = "./data/model.pkl") -> Pipeline:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    @staticmethod
+    def _create_dir_if_not_exists(path: str) -> None:
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def define_pipeline(self, features: FeatureUnion) -> Pipeline:
-        self.pipeline = Pipeline(
+    @staticmethod
+    def _define_pipeline(features: FeatureUnion) -> Pipeline:
+        return Pipeline(
             [
                 ("feature_processing", features),
                 (
@@ -63,10 +63,8 @@ class Model:
                 ),
             ]
         )
-        return self.pipeline
 
     def evaluate(self, X: pd.DataFrame, y: pd.DataFrame) -> dict:
-        self.__is_pipeline_defined()
         validation = cross_validate(
             estimator=self.pipeline,
             X=X,
@@ -85,16 +83,18 @@ class Model:
         del validation["estimator"]
         return {k: v.mean() for k, v in validation.items()}
 
-    def save(self, path: str = "./data/model.pkl", version: str | None = None) -> None:
-        self.__is_pipeline_defined()
+    @staticmethod
+    def update_path_with_version(path: str, version: str) -> str:
+        _dir, basename = os.path.dirname(path), os.path.basename(path)
+        basename_without_ext, ext = os.path.splitext(basename)
+        return os.path.join(_dir, f"{basename_without_ext}.{version}{ext}")
 
+    def save(self, path: str = "./data/model.pkl", version: str | None = None) -> None:
         if version is None:
-            version = self.today
+            version = dt.datetime.today().strftime("%Y-%m-%d")
 
         _path = self.update_path_with_version(path, version)
-        self.create_dir_if_not_exists(os.path.dirname(_path))
+        self._create_dir_if_not_exists(os.path.dirname(_path))
 
-        pickle.dump(self.pipeline, open(_path, "wb"))
-
-    def load(self, path: str = "./data/model.pkl") -> None:
-        self.pipeline = pickle.load(open(path, "rb"))
+        with open(_path, "wb") as f:
+            pickle.dump(self._pipeline, f)

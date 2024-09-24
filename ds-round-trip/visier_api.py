@@ -40,14 +40,14 @@ class VisierApi:
 
     def __init__(self):
         self.env_vars = dotenv_values(dotenv_path=".env.ds-round-trip")
-        self.configuration = self.__load_api_configuration__(self.env_vars)
+        self.configuration = self._load_api_configuration(self.env_vars)
         self.client = ApiClient(self.configuration)
-        self.client.default_headers["TargetTenantID"] = self.env_vars.get(
-            "VISIER_TARGET_TENANT_ID"
+        self.client.set_default_header(
+            "TargetTenantID", self.env_vars.get("VISIER_TARGET_TENANT_ID")
         )
         self.DRAFT_ID = "prod"
 
-    def __load_api_configuration__(self, env_vars: dict) -> Configuration:
+    def _load_api_configuration(self, env_vars: dict) -> Configuration:
         return Configuration(
             vanity=env_vars.get("VISIER_VANITY"),
             host=env_vars.get("VISIER_HOST"),
@@ -56,8 +56,8 @@ class VisierApi:
             password=env_vars.get("VISIER_PASSWORD"),
         )
 
+    @staticmethod
     def compose_list_query_execution_dto(
-        self,
         end_time: str,
         analytic_object: str = "Employee",
         columns: list[dict[str, str]] | None = None,
@@ -67,16 +67,17 @@ class VisierApi:
         A function that compose a list execution DTO with provided analytic object, columns, and end time.
         Default is getting 1 month of data backward to the end date.
         """
-        _columns = []
-
-        if columns is not None:
-            _columns = [
+        _columns = (
+            [
                 PropertyColumnDTO(
                     column_name=c["displayName"],
                     column_definition=QueryPropertyDTO(formula=c["attribute"]),
                 )
                 for c in columns
             ]
+            if columns is not None
+            else []
+        )
 
         return ListQueryExecutionDTO(
             columns=_columns,
