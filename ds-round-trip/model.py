@@ -35,6 +35,9 @@ class Model:
     def __getattr__(self, attr):
         return getattr(self._pipeline, attr)
 
+    def __getitem__(self, item):
+        return self._pipeline[item]
+
     @staticmethod
     def _load(path: str = "./data/model.pkl") -> Pipeline:
         with open(path, "rb") as f:

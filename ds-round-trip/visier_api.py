@@ -21,8 +21,6 @@ from visier_api_data_out import (
     QueryTimeIntervalDTO,
 )
 
-env_creds = dotenv_values()
-
 
 class VisierApi:
     """
