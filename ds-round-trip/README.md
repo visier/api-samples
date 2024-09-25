@@ -16,9 +16,9 @@ By leveraging this framework, organizations can customize their data pipeline an
 To get started with this example on your local machine, follow these steps:
 
 ### 1. Application Setup
-- [Have a Visier tenant that contains objects you want to load data into](https://docs.visier.com/developer/apis/data-in/direct-data-intake/get-started.htm). If they do not exist, create them in the studio.
+- For this example, we require the following attributes: `EmployeeID`, `isFemale`, `Employee.Internal_Job_Experience`, `Highest_Education_Level_Achieved`, `Internal_Experience`, `External_Experience`, and `Market_Direct_Compensation` to conduct the analysis. If any of these attributes are missing from the tenant project schema and analytic model, [create a new attributes](https://docs.visier.com/developer/Tutorials/analytic-model/enhance-analytic-model.htm) under the `Employee` analytic object.
 - [Obtain an APIKey](https://docs.visier.com/developer/Studio/solution%20settings/api-key-generate.htm)
-- Ensure the objects are unmapped in mappings in the primary data category.
+- The output files will contain 3 columns: `EmployeeID`, `EventDate`, and `Market_Direct_Compensation`. The first two are key attributes, Ensure all non-key attributes (in this case, `Market_Direct_Compensation`) are unmapped in the primary data category mappings.
 
 ### 2. Local Machine Setup
 1. **Install Python**  
