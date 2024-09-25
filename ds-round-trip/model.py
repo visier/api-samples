@@ -66,7 +66,7 @@ class Model:
 
     def evaluate(self, X: pd.DataFrame, y: pd.DataFrame) -> dict:
         validation = cross_validate(
-            estimator=self.pipeline,
+            estimator=self._pipeline,
             X=X,
             y=y,
             scoring=(
