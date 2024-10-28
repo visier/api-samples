@@ -3,5 +3,5 @@ python-dotenv>=1.0.1
 SQLAlchemy>=2.0.29
 sqlalchemy_utils>=0.40.0
 psycopg2>=2.9.3
-visier-api-analytic-model>=22222222.99201.1474
-visier-api-data-out>=22222222.99201.1474
+visier-api-analytic-model>=0.99201.1531
+visier-api-data-out>=0.99201.1531
