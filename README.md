@@ -1,4 +1,4 @@
-# Visier API samples
+# Visier API Samples
 A collection of limited-scope sample applications and snippets using public Visier APIs.
 
 ## Structure
@@ -16,5 +16,5 @@ authentication
 
 ### Before You Begin
 To send an API call to Visier, you must know your tenant's vanity name. To find your vanity name:
-1. In Visier, in the global workspace, click **Settings > Single Sign-On** or **Partner Single Sign-On**.
+1. In Visier, in the global workspace, click **Settings**, then click **Single Sign-On** or **Partner Single Sign-On**.
 2. Under **Single Sign-On** or **Bypass Users (Optional)**, find your service provider endpoint; for example, `https://jupiter.visier.com/VServer/auth`. In this example, `jupiter` is the vanity name.
