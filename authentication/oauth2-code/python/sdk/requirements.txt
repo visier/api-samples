@@ -1,2 +1,1 @@
-python-dotenv>=1.0.1
 visier_api_analytic_model>=0.99201.1531
