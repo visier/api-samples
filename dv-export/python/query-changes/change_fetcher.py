@@ -10,34 +10,6 @@ logger = logging.getLogger(__name__)
 class ChangeFetcher:
     """Fetches all changes that are defined for a given analytic object."""
 
-    # Additional properties to fetch for different object types.
-    additional_properties = {
-        "SUBJECT": [
-            PropertyDTO(
-                id='ValidityStart',
-                displayName='ValidityStart',
-                description='Start time of data validity.',
-                dataType='Date', primitiveDataType='Date'
-            ),
-            PropertyDTO(
-                id='ValidityEnd',
-                displayName='ValidityEnd',
-                description='End time of data validity.',
-                dataType='Date',
-                primitiveDataType='Date'
-            ),
-        ],
-        "EVENT": [
-            PropertyDTO(
-                id='EventDate',
-                displayName='EventDate',
-                description='Event occurred time.',
-                dataType='Date',
-                primitiveDataType='Date'
-            )
-        ]
-    }
-
     def __init__(self, model_api: DataModelApi, query_api: DataQueryApi):
         self.model_api = model_api
         self.query_api = query_api
@@ -68,17 +40,4 @@ class ChangeFetcher:
     def get_analytic_object_metadata(self, analytic_object_name: str) -> Tuple[AnalyticObjectDTO, PropertiesDTO]:
         analytic_object_dto = self.model_api.analytic_object(analytic_object_name)
         properties_dto = self.model_api.properties(analytic_object_name)
-        self._append_additional_properties(properties_dto, analytic_object_dto)
         return analytic_object_dto, properties_dto
-
-    def _append_additional_properties(self,
-                                      properties_dto: PropertiesDTO,
-                                      analytic_object_dto: AnalyticObjectDTO) -> None:
-        additional_props = self.additional_properties.get(analytic_object_dto.type, [])
-        existing_property_ids = {prop.id for prop in properties_dto.properties}
-
-        for additional_prop_orig in additional_props:
-            additional_prop = additional_prop_orig.model_copy()
-            additional_prop.id = f"{analytic_object_dto.id}.{additional_prop.id}"
-            if additional_prop.id not in existing_property_ids:
-                properties_dto.properties.append(additional_prop)
