@@ -1,4 +1,8 @@
 from visier_api_analytic_model import DataModelApi
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Alternative way to read config and create api client explicitly:
 # ```python
