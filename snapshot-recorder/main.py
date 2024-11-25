@@ -104,11 +104,11 @@ def download_data(config: Configuration,
         headcount_json = f.read()
     query_dto = AggregationQueryExecutionDTO.from_json(headcount_json)
 
-    api_client = ApiClient(config, 'Accept', 'text/csv')
+    api_client = ApiClient(config)
     query_api = DataQueryApi(api_client)
 
     logger.info(f"Executing query: {query_file_path}")  # Combined messages
-    response = query_api.aggregate_without_preload_content(query_dto)
+    response = query_api.aggregate_without_preload_content(query_dto, _headers={'Accept': 'text/csv'})
     if not 200 <= response.status <= 299:
         raise Exception(f"API request failed with status code {response.status}: {response.data.decode()}")
 
