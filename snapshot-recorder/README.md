@@ -10,10 +10,8 @@ This sample application addresses the challenge of maintaining data integrity fo
 It provides a solution to preserve original metric values, ensuring consistency and avoiding issues caused
 by data corrections at a specific point in time.
 
-There are two sample queries included in this sample to highlight that Event-based metrics (like `resignationCount`) have
-different aggregation semantics than Subject-based ones (like `employeeCount`). This distinction is reflected also in the
-target objects; the Snapshot Overlays, which will compute values based on whether the values contained within are
-cumulative (Event-based) or not (Subject-based).
+The two sample queries in this application highlight the different aggregation semantics for event-based metrics like `resignationCount` and subject-based metrics like `employeeCount`. The snapshot overlays compute values based on whether the snapshot values are
+cumulative (event-based) or not cumulative (subject-based).
 
 ## Solution
 
@@ -21,13 +19,13 @@ The sample application comprises two steps:
 
 1. Downloading the current data state:
     - Use the Data Query API to download the current data state and save it in temporary CSV files.
-    - Two aggregate queries stored in JSON files arerequired for this step. Sample queries are located in
+    - Two aggregate queries stored in JSON files are required for this step. Sample queries are located in
       [./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json) and
       [./queries/gender-headcount-joblevel.json](queries%2Fgender-headcount-joblevel.json).
 
-2. Uploading the csv files using Data Upload API:
+2. Uploading the CSV files using Data Upload API:
     - Use the Data Upload API to upload the CSV files.
-    - The Visier platform maps the data to a pre-created Overlays, which will be used to access data as it was at a
+    - The Visier platform maps the data to a pre-created overlays, which will be used to access data as it was at a
       specific point in time.
 
 ## Usage
@@ -46,22 +44,22 @@ This means that the sample should be run once a month. If it is necessary this i
 }
 ```
 
-When run every month, this sample will upload the state of the data to the pre-created Overlay.
-The Overlay retains all the uploaded snapshots which will enable historical analysis of the data as it was known at the time.
-The `EventDate` in either Overlay will be the last day of the completed period.
+When run every month, this sample will upload the state of the data to the pre-created overlay.
+The overlay retains all the uploaded snapshots which will enable historical analysis of the data as it was known at the time.
+The `EventDate` in either overlay will be the last day of the completed period.
 
 ### Prerequisites
 
 Ensure that the user has the required permissions to access both the Data Query API and the Data Upload API, as well as
 to authenticate using the method you configured.
-To process the uploaded files, the Visier Platform requires the creation of Sources, Overlays, and Mappings.
+To process the uploaded files, the Visier platform requires the creation of sources, overlays, and mappings.
 To analyze the data, metrics should be created.
 
 Here are the instructions:
 
 1. [Source creation](https://docs.visier.com/developer/Studio/data/sources/source-create.htm)
 2. [Overlay creation](https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm)
-3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
+3. [Mapping from source to overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
 4. [Metrics creation](https://docs.visier.com/developer/Analytic%20Model/metrics/metrics-create.htm)
 
 Instead of manually creating the sources, overlays, mappings, and metrics, you can import these pre-configured components from the
