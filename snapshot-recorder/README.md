@@ -10,26 +10,32 @@ This sample application addresses the challenge of maintaining data integrity fo
 It provides a solution to preserve original metric values, ensuring consistency and avoiding issues caused
 by data corrections at a specific point in time.
 
+There are two sample queries included in this sample to highlight that Event-based metrics (like `resignationCount`) have
+different aggregation semantics than Subject-based ones (like `employeeCount`). This distinction is reflected also in the
+target objects; the Snapshot Overlays, which will compute values based on whether the values contained within are
+cumulative (Event-based) or not (Subject-based).
+
 ## Solution
 
 The sample application comprises two steps:
 
 1. Downloading the current data state:
-    - Use the Data Query API to download the current data state and save it in a temporary CSV file.
-    - An aggregate query stored in a JSON file is required for this step. A sample query is located in
-      [./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json).
+    - Use the Data Query API to download the current data state and save it in temporary CSV files.
+    - Two aggregate queries stored in JSON files arerequired for this step. Sample queries are located in
+      [./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json) and
+      [./queries/gender-headcount-joblevel.json](queries%2Fgender-headcount-joblevel.json).
 
-2. Uploading this csv file using Data Upload API:
-    - Use the Data Upload API to upload the CSV file.
-    - The Visier platform maps this data to a pre-created Overlay, which will be used to access data as it was at a
+2. Uploading the csv files using Data Upload API:
+    - Use the Data Upload API to upload the CSV files.
+    - The Visier platform maps the data to a pre-created Overlays, which will be used to access data as it was at a
       specific point in time.
 
 ## Usage
 
-To save data periodically, this application should be run using scheduling software like cron.
-The sample query
-[./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json) fetches data for the last
-completed month.
+To save data periodically, this application should be run using scheduling software like `cron`.
+Both sample queries
+[./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json) and 
+[./queries/gender-headcount-joblevel.json](queries%2Fgender-headcount-joblevel.json) fetch data for the last completed month.
 This means that the sample should be run once a month. If it is necessary this interval could be changed.
 
 ```json
@@ -42,12 +48,13 @@ This means that the sample should be run once a month. If it is necessary this i
 
 When run every month, this sample will upload the state of the data to the pre-created Overlay.
 The Overlay retains all the uploaded snapshots which will enable historical analysis of the data as it was known at the time.
+The `EventDate` in either Overlay will be the last day of the completed period.
 
 ### Prerequisites
 
 Ensure that the user has the required permissions to access both the Data Query API and the Data Upload API, as well as
 to authenticate using the method you configured.
-To process the uploaded file, the Visier Platform requires the creation of a Source, Overlay, and Mapping.
+To process the uploaded files, the Visier Platform requires the creation of Sources, Overlays, and Mappings.
 To analyze the data, metrics should be created.
 
 Here are the instructions:
@@ -57,7 +64,7 @@ Here are the instructions:
 3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
 4. [Metrics creation](https://docs.visier.com/developer/Analytic%20Model/metrics/metrics-create.htm)
 
-Instead of manually creating the source, overlay, mapping, and metrics, you can import these pre-configured components from the
+Instead of manually creating the sources, overlays, mappings, and metrics, you can import these pre-configured components from the
 provided files:
 
 1. [WFF_source.zip](import%2FWFF_source.zip) -
@@ -85,10 +92,11 @@ Python 3.8 or higher is required to run this sample application.
 
 ```shell
 python3 main.py -q ./queries/gender-resignation-joblevel.json
+python3 main.py -q ./queries/gender-headcount-joblevel.json
 ```
 
 The script generates temporary data files, which are removed by default. You can preserve them by setting
-KEEP_TEMP_FILE=true in your .env file.
+`KEEP_TEMP_FILE=True` in your `.env` file.
 
 Ensure that the Data Category release behavior is set to use the latest data version.
 After uploading the file, you need to [run a job](https://docs.visier.com/developer/Studio/data/jobs/jobs-run.htm) to
