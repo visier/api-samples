@@ -59,7 +59,7 @@ Here are the instructions:
 
 1. [Source creation](https://docs.visier.com/developer/Studio/data/sources/source-create.htm)
 2. [Overlay creation](https://docs.visier.com/developer/Analytic%20Model/analytic-objects/overlays/overlays-configure.htm)
-3. [Mapping from Source to Overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
+3. [Mapping from source to overlay](https://docs.visier.com/developer/Studio/data/mappings/mapping-add.htm)
 4. [Metrics creation](https://docs.visier.com/developer/Analytic%20Model/metrics/metrics-create.htm)
 
 Instead of manually creating the sources, overlays, mappings, and metrics, you can import these pre-configured components from the
