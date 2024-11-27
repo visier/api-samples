@@ -3,7 +3,6 @@ Samples that use the `authorization_code` grant type to authenticate against the
 
 ## Prerequisites
 Authorization code authentication requires the following information:
-* API Key
 * Visier API URI. Example: `https://{vanity_name}.api.visier.io/`
 * OAuth 2.0 Client ID
 * OAuth 2.0 Client Secret
