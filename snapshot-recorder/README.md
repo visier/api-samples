@@ -20,8 +20,8 @@ The sample application comprises two steps:
 1. Downloading the current data state:
     - Use the Data Query API to download the current data state and save it in temporary CSV files.
     - Two aggregate queries stored in JSON files are required for this step. Sample queries are located in
-      [./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json) and
-      [./queries/gender-headcount-joblevel.json](queries%2Fgender-headcount-joblevel.json).
+      [./queries/event-metrics.json](queries%2Fevent-metrics.json) and
+      [./queries/subject-metrics.json](queries%2Fsubject-metrics.json).
 
 2. Uploading the CSV files using Data Upload API:
     - Use the Data Upload API to upload the CSV files.
@@ -32,8 +32,8 @@ The sample application comprises two steps:
 
 To save data periodically, this application should be run using scheduling software like `cron`.
 Both sample queries
-[./queries/gender-resignation-joblevel.json](queries%2Fgender-resignation-joblevel.json) and 
-[./queries/gender-headcount-joblevel.json](queries%2Fgender-headcount-joblevel.json) fetch data for the last completed month.
+[./queries/event-metrics.json](queries%2Fevent-metrics.json) and [./queries/subject-metrics.json](queries%2Fsubject-metrics.json)
+fetch data for the last completed month.
 This means that the sample should be run once a month. If it is necessary this interval could be changed.
 
 ```json
@@ -65,10 +65,10 @@ Here are the instructions:
 Instead of manually creating the sources, overlays, mappings, and metrics, you can import these pre-configured components from the
 provided files:
 
-1. [WFF_source.zip](import%2FWFF_source.zip) -
-   to [import](https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm) source.
+1. [WFF_sourcea.zip](import%2FWFF_sources.zip) -
+   to [import](https://docs.visier.com/developer/Studio/data/sources/sources-import-export.htm) sources.
 2. [WFF_overlay_mapping_metrics.zip](import%2FWFF_overlay_mapping_metrics.zip) -
-   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) overlay, mapping, metrics.
+   to [import](https://docs.visier.com/developer/Studio/projects/projects-import-export.htm) overlays, mappings, metrics.
 
 Python 3.8 or higher is required to run this sample application.
 
@@ -89,8 +89,8 @@ Python 3.8 or higher is required to run this sample application.
 ### Running the script
 
 ```shell
-python3 main.py -q ./queries/gender-resignation-joblevel.json
-python3 main.py -q ./queries/gender-headcount-joblevel.json
+python3 main.py -q ./queries/event-metrics.json
+python3 main.py -q ./queries/subject-metrics.json
 ```
 
 The script generates temporary data files, which are removed by default. You can preserve them by setting
