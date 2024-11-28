@@ -4,8 +4,8 @@
       "metrics": {
         "columns": [
           {
-            "id": "employeeCount",
-            "columnName": "HeadCount"
+            "id": "resignationCount",
+            "columnName": "ResignationCount"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "dimensionLevelSelection": {
           "dimension": {
             "name": "Gender",
-            "qualifyingPath": "Employee"
+            "qualifyingPath": "Employee_Exit.Employee"
           },
           "levelIds": [
             "Gender"
@@ -28,15 +28,15 @@
       {
         "dimensionLevelSelection": {
           "dimension": {
-            "name": "JobLevel",
-            "qualifyingPath": "Employee"
+            "name": "Employment_Type",
+            "qualifyingPath": "Employee_Exit.Employee"
           },
           "levelIds": [
-            "JobLevel"
+            "Employment_Type"
           ]
         },
         "tableAxisOptions": {
-          "columnName": "JobLevel"
+          "columnName": "EmploymentType"
         }
       }
     ],
