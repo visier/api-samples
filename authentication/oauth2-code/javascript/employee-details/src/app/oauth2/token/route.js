@@ -39,8 +39,7 @@ export async function GET(request) {
         const instance = axios.create({
             baseURL: host,
             headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                apikey: apiKey
+                "Content-Type": "application/x-www-form-urlencoded"
             },
             auth: {
                 username: clientId,
