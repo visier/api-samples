@@ -16,6 +16,7 @@ Run `npm install`.
 ## Environment
 This sample application requires that you define the following environment variables:
 * `VISIER_HOST`: The base URL for API calls; for example, `https://vanity.api.visier.io`.
+* `VISIER_APIKEY`: The API key required for all Visier API calls.
 * `VISIER_CLIENT_ID`: A Visier-generated unique identifier for the registered OAuth 2.0 client.
 * `VISIER_CLIENT_SECRET`: A Visier-generated secret to protect the registered OAuth 2.0 client.
 
