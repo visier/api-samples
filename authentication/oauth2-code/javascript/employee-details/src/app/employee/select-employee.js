@@ -15,10 +15,11 @@
 import React, { useState, useEffect } from "react";
 import { Form } from "react-bootstrap";
 import useCredsStore from "@/store/credsStore";
+import { useShallow } from 'zustand/react/shallow';
 
 export default function SelectEmployee({ setSelectedEmpId }) {
     const [empRecords, setEmpRecords] = useState([]);
-    const [authHeader, config] = useCredsStore(s => [s.authHeader, s.config]);
+    const [authHeader, config] = useCredsStore(useShallow(s => [s.authHeader, s.config]));
     
     const setEmployees = async response => {
         const payload = await response.json()

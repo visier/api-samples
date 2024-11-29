@@ -17,10 +17,11 @@ import React, { useEffect, useState } from "react";
 import useCredsStore from "@/store/credsStore";
 import { Alert } from "react-bootstrap";
 import DisplayProperties from "./display-properties";
+import { useShallow } from 'zustand/react/shallow';
 
 export default function DisplayEmployee({ selectedEmpId }) {
     const [empDetails, setEmpDetails] = useState([]);
-    const [authHeader, config] = useCredsStore(s => [s.authHeader, s.config]);
+    const [authHeader, config] = useCredsStore(useShallow(s => [s.authHeader, s.config]));
 
     const fetchDetails = () => {
     

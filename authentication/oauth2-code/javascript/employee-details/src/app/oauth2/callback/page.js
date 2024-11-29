@@ -16,6 +16,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import useCredsStore from '@/store/credsStore';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function Callback() {
     // router for query args navigation back to the main page
@@ -26,8 +27,8 @@ export default function Callback() {
     const code = searchParams.get("code");
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    const [setJWT, setConfig] = useCredsStore(s => [s.setJWT, s.setConfig]);
-    
+    const [setJWT, setConfig] = useCredsStore(useShallow(s => [s.setJWT, s.setConfig]));
+
     const callToken = async () => {
         const response = await fetch("/oauth2/token?code=" + code);
         if (response.ok) {
