@@ -19,4 +19,5 @@ Before starting the application using `yarn dev`, create a file named `.env.deve
 VISIER_HOST=https://customer-specific.api.visier.io
 VISIER_CLIENT_ID='client-id-from-registration'
 VISIER_CLIENT_SECRET='client-secret-from-registration'
+VISIER_APIKEY='visier-provided-api-key'
 ```
