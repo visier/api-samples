@@ -21,10 +21,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import useCredsStore from '@/store/credsStore';
 import { Alert } from 'react-bootstrap';
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function Home() {
     const router = useRouter()
-    const isAuthenticated = useCredsStore(s => s.isAuthenticated);
+    const isAuthenticated = useCredsStore(useShallow(s => s.isAuthenticated));
 
     return (
         <>
