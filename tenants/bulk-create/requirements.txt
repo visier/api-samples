@@ -1,0 +1,4 @@
+python-dotenv
+dynaconf
+Jinja2
+dist/visier_api_administration-0.99200.20125-py3-none-any.whl
