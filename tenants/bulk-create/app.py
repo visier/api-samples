@@ -23,25 +23,43 @@ from visier_api_administration.models import BatchTenantProvisionAPIDTO
 
 # Overkill for this example, but it's a good practice to use a configuration management tool.
 # In this case, we're loading the request template for making bulk tenant creation requests.
-global_conf = Dynaconf(settings_files=['./templates/tenants.toml'])
-for conf in global_conf:
-    if conf.lower() == 'bulk_create_tenants':
-        template = global_conf[conf].create
+def get_template():
+    """Build the request template for creating tenants in bulk."""
+    global_conf = Dynaconf(settings_files=['./templates/tenants.toml'])
+    for conf in global_conf:
+        if conf.lower() == 'bulk_create_tenants':
+            template = global_conf[conf].create
+    return template
 
-# Load the tenant definitions.
-with open('./data/tenants.json', 'r')  as data_file:
-    tenants = json.load(data_file)
+def load_tenant_data():
+    with open('./data/tenants.json', 'r')  as data_file:
+        tenants = json.load(data_file)
+    return tenants
 
-# Render the request by resolving the template with the tenant definitions.
-environment = Environment(undefined=StrictUndefined)
-provision_date = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-request_json = environment.from_string(template).render(tenants=tenants,
-                                                   provision_date=provision_date)
+def build_request_body(template, tenants):
+    """Render the request template with the tenant definitions."""
+    environment = Environment(undefined=StrictUndefined)
+    provision_date = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    request_json = environment.from_string(template).render(tenants=tenants,
+                                                            provision_date=provision_date)
+    return request_json
 
-# Get ready to call the API
-load_dotenv()
-tenant_api = TenantsV1Api()
+def add_tenants(tenant_api, request_json):
+    request = BatchTenantProvisionAPIDTO.from_json(request_json)
+    response = tenant_api.add_tenants(request)
+    return response
 
-request = BatchTenantProvisionAPIDTO.from_json(request_json)
-response = tenant_api.add_tenants(request)
-print(response)
+
+if __name__ == '__main__':
+    tenants = load_tenant_data()
+
+    # Render the request by resolving the template with the tenant definitions.
+    template = get_template()
+
+    # Get ready to call the API
+    load_dotenv()
+    tenant_api = TenantsV1Api()
+
+    request_json = build_request_body(template, tenants)
+    response = add_tenants(tenant_api, request_json)
+    print(response)
