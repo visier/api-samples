@@ -6,7 +6,14 @@ This is a sample python script that pulls data from a source file (in this examp
 # Getting started
 
 ## Environment
-Python 3.x installed on your system and have installed all dependencies: `dotenv`, `pandas`, `requests`, `os`. You can install them using pip and the provided `requirements.txt`.
+Python 3.x installed on your system and have installed all dependencies:
+- `pandas`
+- `os`
+- `visier_api_core`
+- `visier-api-analytic-model`
+- `visier-api-data-in`
+
+You can install them using pip and the provided `requirements.txt`.
 
 ## Configuration
 Configure the `.env` file.
@@ -58,7 +65,7 @@ If rows in the source file are not present in the plan, it adds these rows to th
 
 The following functions of the script **must** be adapted before it can be used to load data into a plan:
 - **`get_source_data`**
-  - This function is hardcoded to look at the sample source csv in this file. 
+  - This function is hardcoded to look at the sample `source.csv`. 
   - This should be modified to fetch data from another application.
 - **`map_data`**
   - This function's logic is based on the sample source data. You should change the logic in this function to match those of your source file.
