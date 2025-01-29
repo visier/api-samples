@@ -72,7 +72,7 @@ def load_data_into_visier(filename, method, counter) -> DataLoadResult:
     )
 
 
-# Uses the Planning data load API to add rows to the configured plan
+# Uses the Planning Data Load API to add rows to the configured plan.
 def send_added_rows_to_visier(filename) -> List[PlanSegmentLevelMemberDTO]:
     print("Adding rows to plan...")
     data = open(filename, 'rb').read()
@@ -86,15 +86,15 @@ def send_added_rows_to_visier(filename) -> List[PlanSegmentLevelMemberDTO]:
     return response.custom_members
 
 
-# Generates a csv and then uses the Planning Data Load API to add/remove rows.
-# It will return a list of custom members in the plan that can be used for correcting the existing mapped file.
-# This function assumes that a mapped file for data loading has already been created.
+# Generates a CSV and then uses the Planning Data Load API to add or remove rows.
+# Returns a list of custom members in the plan that you can use to correct the existing mapped file.
+# Assumes that a mapped file for data loading has already been created.
 # Parameters:
-#    row_indices_to_add - the row indices in the existing mapped file that need to be added to the plan
-#    schema - the schema of the plan
-#    filename - the filename for the csv that will be generated
+#    row_indices_to_add: The row indices in the existing mapped file to add to the plan.
+#    schema: The schema of the plan.
+#    filename: The name of the CSV file to generate.
 def add_missing_rows_to_plan(row_indices_to_add: List[int], schema: PlanSchemaDTO, filename: str) -> List[PlanSegmentLevelMemberDTO]:
-    print("Generating the csv for adding missing rows to plan...")
+    print("Generating the  for adding missing rows to plan...")
     data_to_upload = retrieve_visier_data_file().to_dict('index')
     new_row_data = []
     for idx in row_indices_to_add:
@@ -106,7 +106,7 @@ def add_missing_rows_to_plan(row_indices_to_add: List[int], schema: PlanSchemaDT
                     segmentLevel.segment_level_id: dataUploadRowData[segmentLevel.segment_level_id]
                 }
             )
-        # Adds the value for the Add/Remove column
+        # Adds the value for the Add/Remove column.
         rowData.update({"Add/Remove": "Add"})
         new_row_data.append(rowData)
 
@@ -114,7 +114,7 @@ def add_missing_rows_to_plan(row_indices_to_add: List[int], schema: PlanSchemaDT
     return send_added_rows_to_visier(filename)
 
 
-# Retrieves the schema for the planId in the configuration
+# Retrieves the schema for the `planId` in the configuration.
 def get_schema() -> PlanSchemaDTO:
     print(f"Fetching plan schema for plan with id: {PLAN_ID}")
     response = data_load_api.plan_info_with_schema(
@@ -125,16 +125,16 @@ def get_schema() -> PlanSchemaDTO:
     return response.var_schema
 
 
-# Getting data from source.
+# Gets data from the source.
 # Modify this function to get it to call your database API.
-# For now, we are sourcing from a local csv file.
+# For now, we are sourcing from a local CSV file.
 def get_source_data() -> DataFrame:
     print(f"Reading file from {SOURCE_FILENAME}...")
     raw_data = pd.read_csv(SOURCE_FILENAME)
     return raw_data
 
 
-# This function maps the source data into a csv based on the schema of the plan.
+# Maps the source data into a CSV based on the schema of the plan.
 def map_data(source_data: DataFrame, schema: PlanSchemaDTO):
     print("Mapping source data based on plan schema...")
     data = source_data.to_dict('index')
@@ -149,20 +149,20 @@ def map_data(source_data: DataFrame, schema: PlanSchemaDTO):
     return flattened_rows
 
 
-# This helper function transforms the source data to match the plan schema.
-# Change this function for mapping logic appropriate for the source data
+# Transforms the source data to match the plan schema.
+# Change this function to contain mapping logic appropriate for the source data.
 def map_row_data(row_data, schema: PlanSchemaDTO, member_list: List[PlanSegmentMemberWithLevelId]) -> List[Dict[str, str]]:
-    # hardcoded headers from source data
+    # Hardcoded headers from the source data.
     source_org_key = "Organization Hierarchy"
     source_loc_key = "Location"
     non_time_period_keys = [source_org_key, source_loc_key]
 
-    # gets the member for the two dimensions provided in the source data
+    # Gets the member for the two dimensions provided in the source data.
     source_org_member = row_data[source_org_key]
     source_loc_member = row_data[source_loc_key]
     leaf_members = [source_org_member, source_loc_member]
 
-    # the source data has a column for each time period so here we identify
+    # The source data has a column for each time period, so here we identify.
     time_period_keys_from_source = []
     for key in row_data.keys():
         if key not in non_time_period_keys:
@@ -176,7 +176,7 @@ def map_row_data(row_data, schema: PlanSchemaDTO, member_list: List[PlanSegmentM
         member_info = next((member for member in member_list if member.displayName == leafMember), None)
         if member_info is None:
             print("Could not find member: " + leafMember)
-            # Assume it's the top level of location
+            # Assume it's the top level of location.
             all_paths.update(
                 {
                     'Location.Location_1': leafMember
@@ -203,9 +203,9 @@ def map_row_data(row_data, schema: PlanSchemaDTO, member_list: List[PlanSegmentM
     return formatted_visier_data
 
 
-# Creates a map from source's time keys to the plan schema keys by transforming the source's time keys
-# to match the keys used by the plan schema. The source data was formatted MM/YY
-# while the plan schema uses YYYY-MM-DD.
+# Creates a map from the source's time keys to the plan schema keys by transforming the source's time keys
+# to match the keys used by the plan schema. The source data format is MM/YY
+# while the plan schema format is YYYY-MM-DD.
 #
 # Modify this function if your source's time format is different from the sample file.
 # You might need to do a different kind of mapping in this function.
@@ -228,10 +228,10 @@ def write_to_csv(data: List[Dict], filename: str):
     data_frame.to_csv(filename, index=False)
 
 
-# Writes a csv file for loading the data into Visier
+# Writes a CSV file for loading the data into Visier.
 # Parameters:
-#    filename - name of the file we will generate
-#    raw - the source data as a DataFrame
+#    filename: The name of the CSV file to generate.
+#    raw: The source data as a DataFrame.
 def generate_data_upload_csv(filename: str, raw: DataFrame):
     print(f'Generating CSV for data load filename:{filename}')
     schema = get_schema()
@@ -240,7 +240,7 @@ def generate_data_upload_csv(filename: str, raw: DataFrame):
     return schema
 
 
-# Updates the mapped data load file with the ids of the custom members generated from a call to the add/remove rows API
+# Updates the mapped data load file with the IDs of the custom members generated from a call to the Add or remove plan rows endpoint.
 def update_data_load_file_with_custom_member_id(custom_members: List[PlanSegmentLevelMemberDTO], schema: PlanSchemaDTO):
     print('Updating data load file...')
     mapped_file = pd.read_csv(MAPPED_DATA_LOAD_FILENAME)
@@ -261,7 +261,7 @@ def update_data_load_file_with_custom_member_id(custom_members: List[PlanSegment
 def parent_path(member: PlanSegmentMemberWithLevelId, member_list: List[PlanSegmentMemberWithLevelId]) -> Dict[str, str]:
     if member.parentId:
         parent = member.parentId
-        # Look for the member info for the parent and recurse
+        # Look for the member info for the parent and recurse.
         parent_member_info = next((x for x in member_list if x.id == parent), None)
         if parent_member_info is None:
             return {
@@ -294,7 +294,7 @@ def process_segment_with_members(segment_member_list: PlanSegmentLevelMemberList
     return list(map(lambda member: add_segment_level_id_to_member(member, segment_member_list.segment_level_id), segment_member_list.members))
 
 
-# Retrieves the already mapped file from disk
+# Retrieves the already mapped file from disk.
 def retrieve_visier_data_file():
     rawData = pd.read_csv(MAPPED_DATA_LOAD_FILENAME)
     return rawData
@@ -307,13 +307,13 @@ def main():
     test = load_data_into_visier(MAPPED_DATA_LOAD_FILENAME, "VALIDATE", data_load_report_counter)
     data_load_report_counter = data_load_report_counter + 1
 
-    # If there are missing rows in the plan, the next section uses the Add/Remove API to add them to the plan
+    # If there are missing rows in the plan, the next section uses the Add or remove plan rows endpoint to add them to the plan.
     if test.missingRowIndices:
         custom_members_in_plan = add_missing_rows_to_plan(test.missingRowIndices, schema, MAPPED_ADD_REMOVE_FILENAME)
         if custom_members_in_plan:
             update_data_load_file_with_custom_member_id(custom_members_in_plan, schema)
 
-    # Load the data after rows have been added to the plan and the csv file has been updated with the ids of
+    # Load the data after rows have been added to the plan and the CSV file has been updated with the IDs of
     # the newly added rows.
     load_data_into_visier(MAPPED_DATA_LOAD_FILENAME, METHOD, data_load_report_counter)
 
