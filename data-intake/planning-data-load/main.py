@@ -94,7 +94,7 @@ def send_added_rows_to_visier(filename) -> List[PlanSegmentLevelMemberDTO]:
 #    schema: The schema of the plan.
 #    filename: The name of the CSV file to generate.
 def add_missing_rows_to_plan(row_indices_to_add: List[int], schema: PlanSchemaDTO, filename: str) -> List[PlanSegmentLevelMemberDTO]:
-    print("Generating the  for adding missing rows to plan...")
+    print("Generating the csv for adding missing rows to plan...")
     data_to_upload = retrieve_visier_data_file().to_dict('index')
     new_row_data = []
     for idx in row_indices_to_add:
@@ -162,7 +162,7 @@ def map_row_data(row_data, schema: PlanSchemaDTO, member_list: List[PlanSegmentM
     source_loc_member = row_data[source_loc_key]
     leaf_members = [source_org_member, source_loc_member]
 
-    # The source data has a column for each time period, so here we identify.
+    # The source data has a column for each time period. We identify the time periods used in the source file and use the `generate_time_lookup` function to transform the time periods into a format that the API accepts.
     time_period_keys_from_source = []
     for key in row_data.keys():
         if key not in non_time_period_keys:
