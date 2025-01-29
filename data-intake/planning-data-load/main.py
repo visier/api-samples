@@ -60,11 +60,8 @@ def load_data_into_visier(filename, method, counter) -> DataLoadResult:
 
     missing_row_indices: List[int] = list(map(lambda x: x.row, missingRowErrors))
     print(f"Updated cell count: {dto.updated_cells_count}")
-    print(f"Writing data load report...")
-    with open(f"DataLoadReport_{counter}.txt", "w") as file:
-        file.write(f"Data Load Report for plan {PLAN_ID} and scenario {SCENARIO_ID}: \n")
-        file.write(f"Calculation Method: {CALCULATION}    |    Method: {method}\n")
-        file.write(f"{json.dumps(dto.to_json(), indent=2)}")
+    with open(f"DataLoadLog_{counter}_{PLAN_ID}_{SCENARIO_ID}_{method}.json", "w") as file:
+        json.dump(dto.to_json(), file, separators=(',', ':'))
         file.close()
     return DataLoadResult(
         dto,
