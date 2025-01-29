@@ -17,7 +17,7 @@ You can install them using pip and the provided `requirements.txt`.
 ## Configuration
 Configure the `.env` file.
 
-Use the following properties for authentication. The `authenticate` function requests a security token from Visier. You may modify this function if you want to use a different authentication method. For more authentication options, see [API Authentication](https://docs.visier.com/visier-people/Default.htm#cshid=1054).
+Use the following properties for authentication. This script authenticates using the [Visier Python SDKs](https://github.com/visier/python-sdk). For more authentication options, see [API Authentication](https://docs.visier.com/visier-people/Default.htm#cshid=1054).
 ```
 VISIER_HOST=https://customer-specific.ai.visier.io
 VISIER_API='visier-provided-api-key'
