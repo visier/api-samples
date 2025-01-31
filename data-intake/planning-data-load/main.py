@@ -305,10 +305,10 @@ def parent_path(member: PlanSegmentMemberWithLevelId, member_list: List[PlanSegm
 def add_segment_level_id_to_member(member: PlanSegmentLevelMemberDTO, segment_id: str) -> PlanSegmentMemberWithLevelId:
     return PlanSegmentMemberWithLevelId(
         id=member.id,
-        displayName=member.display_name,
-        segmentId=segment_id,
-        isCustom=member.is_custom,
-        parentId=member.parent_id,
+        display_name=member.display_name,
+        segment_id=segment_id,
+        is_custom=member.is_custom,
+        parent_id=member.parent_id,
     )
 
 
