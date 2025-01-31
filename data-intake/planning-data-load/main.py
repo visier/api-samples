@@ -84,34 +84,34 @@ def send_added_rows_to_visier(filename) -> List[PlanSegmentLevelMemberDTO]:
     return response.custom_members
 
 
-def add_missing_rows_to_plan(row_indices_to_add: List[int], schema: PlanSchemaDTO, filename: str) -> List[PlanSegmentLevelMemberDTO]:
+def add_missing_rows_to_plan(row_indices_to_add: List[int], schema: PlanSchemaDTO, file_name: str) -> List[PlanSegmentLevelMemberDTO]:
     """
     Generates a CSV and then uses the Planning Data Load API to add or remove rows.
     Assumes that a mapped file for data loading has already been created.
 
     :param row_indices_to_add: The row indices in the existing mapped file to add to the plan.
     :param schema: The schema of the plan.
-    :param filename: The name of the CSV file to generate.
+    :param file_name: The name of the CSV file to generate.
     :returns: A list of custom members in the plan that you can use to correct the existing mapped file.
     """
     print("Generating the csv for adding missing rows to plan...")
     data_to_upload = retrieve_visier_data_file().to_dict('index')
     new_row_data = []
     for idx in row_indices_to_add:
-        dataUploadRowData = data_to_upload[idx]
-        rowData = {}
-        for segmentLevel in schema.plan_segment_level_members:
-            rowData.update(
+        data_upload_row_data = data_to_upload[idx]
+        row_data = {}
+        for segment_level in schema.plan_segment_level_members:
+            row_data.update(
                 {
-                    segmentLevel.segment_level_id: dataUploadRowData[segmentLevel.segment_level_id]
+                    segment_level.segment_level_id: data_upload_row_data[segment_level.segment_level_id]
                 }
             )
         # Adds the value for the Add/Remove column.
-        rowData.update({"Add/Remove": "Add"})
-        new_row_data.append(rowData)
+        row_data.update({"Add/Remove": "Add"})
+        new_row_data.append(row_data)
 
-    write_to_csv(new_row_data, filename)
-    return send_added_rows_to_visier(filename)
+    write_to_csv(new_row_data, file_name)
+    return send_added_rows_to_visier(file_name)
 
 
 def get_schema() -> PlanSchemaDTO:
@@ -200,17 +200,17 @@ def map_row_data(row_data, schema: PlanSchemaDTO, member_list: List[PlanSegmentM
             all_paths.update(path)
 
     formatted_visier_data = []
-    for timePeriod in time_period_keys_from_source:
+    for time_period in time_period_keys_from_source:
         data_for_visier = {
-            'periodId': time_period_lookup[timePeriod],
-            'Headcount_And_Cost_Planning.Headcount': row_data[timePeriod]
+            'periodId': time_period_lookup[time_period],
+            'Headcount_And_Cost_Planning.Headcount': row_data[time_period]
         }
 
-        for segmentLevelId in segment_level_keys:
-            if segmentLevelId in all_paths:
-                data_for_visier[segmentLevelId] = all_paths[segmentLevelId]
+        for segment_level_id in segment_level_keys:
+            if segment_level_id in all_paths:
+                data_for_visier[segment_level_id] = all_paths[segment_level_id]
             else:
-                data_for_visier[segmentLevelId] = ""
+                data_for_visier[segment_level_id] = ""
 
         formatted_visier_data.append(data_for_visier)
     return formatted_visier_data
@@ -320,8 +320,8 @@ def retrieve_visier_data_file():
     """
     Retrieves the already mapped file from disk.
     """
-    rawData = pd.read_csv(MAPPED_DATA_LOAD_FILENAME)
-    return rawData
+    raw_data = pd.read_csv(MAPPED_DATA_LOAD_FILENAME)
+    return raw_data
 
 
 def main():
