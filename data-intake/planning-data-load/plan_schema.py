@@ -6,13 +6,13 @@ from visier_api_data_in import PlanDataUploadResponseDTO
 @dataclass
 class DataLoadResult:
     response: PlanDataUploadResponseDTO
-    missingRowIndices: List[int]
+    missing_row_indices: List[int]
 
 
 @dataclass
 class PlanSegmentMemberWithLevelId:
     id: str
-    displayName: str
-    segmentId: str
-    isCustom: bool
-    parentId: Optional[str] = None
+    display_name: str
+    segment_id: str
+    is_custom: bool
+    parent_id: Optional[str] = None
