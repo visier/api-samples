@@ -2749,27 +2749,27 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "visier-api-analytic-model"
-version = "0.99201.1687"
+version = "0.99201.1739.post1"
 description = "Visier Analytic Model APIs"
 optional = false
 python-versions = "*"
 files = [
-    {file = "visier_api_analytic_model-0.99201.1687-py3-none-any.whl", hash = "sha256:a08ec4beea82c2d492cf5e590138c6e671ea1c15e03cc12cb44b5fc2cf17bc98"},
-    {file = "visier_api_analytic_model-0.99201.1687.tar.gz", hash = "sha256:bf25627284a7bae6902600cc293b9a3ebe93a820a66cffe327bd4db8b6e6119d"},
+    {file = "visier_api_analytic_model-0.99201.1739.post1-py3-none-any.whl", hash = "sha256:a08ec4beea82c2d492cf5e590138c6e671ea1c15e03cc12cb44b5fc2cf17bc98"},
+    {file = "visier_api_analytic_model-0.99201.1739.post1.tar.gz", hash = "sha256:bf25627284a7bae6902600cc293b9a3ebe93a820a66cffe327bd4db8b6e6119d"},
 ]
 
 [package.dependencies]
-visier-api-core = ">=0.99201.1687,<0.99202.0"
+visier-api-core = ">=0.99201.1739.post1,<0.99202.0"
 
 [[package]]
 name = "visier-api-core"
-version = "0.99201.1687"
+version = "0.99201.1739.post1"
 description = "Visier Authentication APIs"
 optional = false
 python-versions = "*"
 files = [
-    {file = "visier_api_core-0.99201.1687-py3-none-any.whl", hash = "sha256:bbb7a10f44342aa1f0022afe653845384a98f145e2fddb00b9d1781d3c4617b7"},
-    {file = "visier_api_core-0.99201.1687.tar.gz", hash = "sha256:68fbd22ff736fa33df70fa0d0db61d1af4144e875c163dfd9300e7439255cdfc"},
+    {file = "visier_api_core-0.99201.1739.post1-py3-none-any.whl", hash = "sha256:bbb7a10f44342aa1f0022afe653845384a98f145e2fddb00b9d1781d3c4617b7"},
+    {file = "visier_api_core-0.99201.1739.post1.tar.gz", hash = "sha256:68fbd22ff736fa33df70fa0d0db61d1af4144e875c163dfd9300e7439255cdfc"},
 ]
 
 [package.dependencies]
@@ -2777,35 +2777,35 @@ Flask = ">=3.0.0"
 pydantic = ">=2"
 python-dateutil = "*"
 typing-extensions = ">=4.7.1"
-urllib3 = ">=1.25.3,<2.1.0"
+urllib3 = ">=1.25.3,<3"
 
 [[package]]
 name = "visier-api-data-in"
-version = "0.99201.1687"
+version = "0.99201.1739.post1"
 description = "Visier Data In APIs"
 optional = false
 python-versions = "*"
 files = [
-    {file = "visier_api_data_in-0.99201.1687-py3-none-any.whl", hash = "sha256:c3bbd734eed4078d83afb97f00beeb25bdee4190c3676c1944eb516afd6b9d78"},
-    {file = "visier_api_data_in-0.99201.1687.tar.gz", hash = "sha256:64ca1beb426762458a7f45980a8d5a39d143a02f34956a9597ae4fba2e41e48f"},
+    {file = "visier_api_data_in-0.99201.1739.post1-py3-none-any.whl", hash = "sha256:c3bbd734eed4078d83afb97f00beeb25bdee4190c3676c1944eb516afd6b9d78"},
+    {file = "visier_api_data_in-0.99201.1739.post1.tar.gz", hash = "sha256:64ca1beb426762458a7f45980a8d5a39d143a02f34956a9597ae4fba2e41e48f"},
 ]
 
 [package.dependencies]
-visier-api-core = ">=0.99201.1687,<0.99202.0"
+visier-api-core = ">=0.99201.1739.post1,<0.99202.0"
 
 [[package]]
 name = "visier-api-data-out"
-version = "0.99201.1687"
+version = "0.99201.1739.post1"
 description = "Visier Data Out APIs"
 optional = false
 python-versions = "*"
 files = [
-    {file = "visier_api_data_out-0.99201.1687-py3-none-any.whl", hash = "sha256:0aea0b110a59f6412e1ab7d714f13d97711835ae8c8f5274fcedefac6a7e8b7f"},
-    {file = "visier_api_data_out-0.99201.1687.tar.gz", hash = "sha256:79f7e442bc9eab75b61a50b56c5e8738a6af70c620846e310f118e065584deb8"},
+    {file = "visier_api_data_out-0.99201.1739.post1-py3-none-any.whl", hash = "sha256:0aea0b110a59f6412e1ab7d714f13d97711835ae8c8f5274fcedefac6a7e8b7f"},
+    {file = "visier_api_data_out-0.99201.1739.post1.tar.gz", hash = "sha256:79f7e442bc9eab75b61a50b56c5e8738a6af70c620846e310f118e065584deb8"},
 ]
 
 [package.dependencies]
-visier-api-core = ">=0.99201.1687,<0.99202.0"
+visier-api-core = ">=0.99201.1739.post1,<0.99202.0"
 
 [[package]]
 name = "wcwidth"
