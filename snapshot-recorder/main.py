@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from visier_api_core import Configuration, ApiClient
 from visier_api_data_in import DataUploadApi
 from visier_api_data_out import DataQueryApi, AggregationQueryExecutionDTO
+from visier_api_analytic_model import DataModelApi
 
 
 def setup_logger() -> logging.Logger:
@@ -161,6 +162,14 @@ def main() -> None:
         load_dotenv(dotenv_path='.env.snapshot-recorder', override=True)
         load_dotenv(dotenv_path='.env', override=True)
         api_config = load_api_configuration()
+
+        model_api: DataModelApi = DataModelApi()
+
+        # This one should be working
+        response = model_api.dimensions("Employee")
+
+        # you don't need another part
+        return
 
         temp_dir = os.getenv('TEMP_STORAGE_PATH', default='tmp_storage')
         temp_dir_created = ensure_temp_dir_exists(temp_dir)
