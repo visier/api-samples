@@ -3,13 +3,13 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from visier.api import DVExportApiClient
+
 from visier_platform_sdk import ApiClient, DataVersionExportApi, DataVersionExportScheduleJobRequestDTO, \
     DataVersionExportDTO, ApiException
 
+from constants import *
 from data_store import DataStore
 from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, convert_table_metadata_into_table_infos
-from constants import *
 
 logger = logging.getLogger('dv_export')
 
@@ -167,7 +167,7 @@ class DVExport:
 
     def _handle_delta_export(self,
                              tables: list[TableInfo],
-                             metadata: dict[str, any],
+                             metadata: DataVersionExportDTO,
                              export_id: str):
         """
         Handle a delta export, where there could be new, existing, and/or deleted tables to operate on.
@@ -177,12 +177,12 @@ class DVExport:
         """
         logger.info(f"Performing delta export")
 
-        deleted_tables = metadata[DELETED_TABLES_KEY]
+        deleted_tables = metadata.deleted_tables
         for deleted_table in deleted_tables:
             logger.info(f"Dropping table={deleted_table}")
             self.data_store.drop_table(deleted_table)
 
-        new_tables = metadata[NEW_TABLES_KEY]
+        new_tables = metadata.new_tables
         new_table_infos = [tbl_info for tbl_info in tables if tbl_info.name in new_tables]
 
         self._create_and_populate_new_tables(new_table_infos, export_id)
@@ -214,7 +214,7 @@ class DVExport:
         :param metadata: Full export metadata returned from a DV export job
         """
         export_id = metadata.uuid
-        tables = convert_table_metadata_into_table_infos(metadata.to_dict()['tables'])
+        tables = convert_table_metadata_into_table_infos(metadata.tables)
 
         is_initial_export = (len(metadata.tables) if metadata.tables else 0) == (len(metadata.new_tables) if metadata.new_tables else 0)
 

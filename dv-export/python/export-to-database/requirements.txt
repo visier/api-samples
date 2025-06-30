@@ -1,5 +1,4 @@
 pandas>=2.2.2
 python-dotenv>=1.0.1
 SQLAlchemy>=2.0.29
-visier_connector>=0.9.18
 visier-platform-sdk>=22222222.99201.2010
