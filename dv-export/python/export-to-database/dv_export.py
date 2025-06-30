@@ -22,16 +22,16 @@ class DVExport:
         self.base_download_dir = base_download_dir
 
     def generate_data_version_export(self,
-                                     data_version_number: str,
-                                     base_data_version_number: Optional[str],
+                                     data_version_number: int,
+                                     base_data_version_number: Optional[int],
                                      mx_num_polls: int,
                                      poll_interval_secs: int
                                      ) -> DataVersionExportDTO:
 
         # Schedule a new export job
         dv_export_schedule_job_request_dto = DataVersionExportScheduleJobRequestDTO(
-            data_version_number=data_version_number,
-            base_data_version_number=base_data_version_number if base_data_version_number else None
+            data_version_number=str(data_version_number),
+            base_data_version_number=str(base_data_version_number) if base_data_version_number else None
         )
 
         job_id = self._schedule_export_job(dv_export_schedule_job_request_dto)
