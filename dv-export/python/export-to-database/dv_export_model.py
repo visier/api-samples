@@ -75,18 +75,15 @@ def convert_table_metadata_into_table_infos(tables_metadata: list[DataVersionExp
 
     for table_metadata in tables_metadata:
         table_name = table_metadata.name
-        common_columns_and_files = table_metadata.common_columns
-        new_columns_and_files = table_metadata.new_columns
+        common_columns_and_files = _convert_metadata_into_infos(table_metadata.common_columns)
+        new_columns_and_files = _convert_metadata_into_infos(table_metadata.new_columns)
         deleted_columns = table_metadata.deleted_columns
-
-        common_columns_column_infos, common_columns_file_infos = _convert_metadata_into_infos(common_columns_and_files)
-        new_columns_column_infos, new_columns_file_infos = _convert_metadata_into_infos(new_columns_and_files)
 
         tables.append(TableInfo(
             table_name,
             ColumnsMetadata(
-                ColumnInfoAndFileInfo(common_columns_column_infos, common_columns_file_infos),
-                ColumnInfoAndFileInfo(new_columns_column_infos, new_columns_file_infos),
+                common_columns_and_files,
+                new_columns_and_files,
                 deleted_columns
             )
         ))
@@ -94,10 +91,10 @@ def convert_table_metadata_into_table_infos(tables_metadata: list[DataVersionExp
     return tables
 
 
-def _convert_metadata_into_infos(metadata: DataVersionExportFileDTO) -> (list[ColumnInfo], list[FileInfo]):
+def _convert_metadata_into_infos(metadata: DataVersionExportFileDTO) -> ColumnInfoAndFileInfo:
     column_infos = [_convert_to_column_info(column) for column in metadata.columns]
     file_infos = [_convert_to_file_info(file) for file in metadata.files]
-    return column_infos, file_infos
+    return ColumnInfoAndFileInfo(column_infos, file_infos)
 
 
 def _convert_to_column_info(column: DataVersionExportColumnDTO) -> ColumnInfo:

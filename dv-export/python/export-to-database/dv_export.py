@@ -1,23 +1,15 @@
 import logging
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from visier_platform_sdk import ApiClient, DataVersionExportApi, DataVersionExportScheduleJobRequestDTO, \
     DataVersionExportDTO, ApiException
 
-from constants import *
 from data_store import DataStore
 from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, convert_table_metadata_into_table_infos
 
 logger = logging.getLogger('dv_export')
-
-
-@dataclass
-class DataVersions:
-    data_version_number: int
-    base_data_version_number: Optional[int]
 
 
 class DVExport:
@@ -30,10 +22,18 @@ class DVExport:
         self.base_download_dir = base_download_dir
 
     def generate_data_version_export(self,
-                                     dv_export_schedule_job_request_dto: DataVersionExportScheduleJobRequestDTO,
+                                     data_version_number: str,
+                                     base_data_version_number: Optional[str],
                                      mx_num_polls: int,
                                      poll_interval_secs: int
                                      ) -> DataVersionExportDTO:
+
+        # Schedule a new export job
+        dv_export_schedule_job_request_dto = DataVersionExportScheduleJobRequestDTO(
+            data_version_number=data_version_number,
+            base_data_version_number=base_data_version_number if base_data_version_number else None
+        )
+
         job_id = self._schedule_export_job(dv_export_schedule_job_request_dto)
         export_id = self._get_export_id_when_job_finishes(job_id, mx_num_polls, poll_interval_secs)
         return self.get_export_metadata(export_id)

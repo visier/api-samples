@@ -50,14 +50,10 @@ client = ApiClient(config)
 dv_export = DVExport(client, store, base_download_directory)
 
 if args.export_uuid is None:
-
-    # Schedule a new export job
-    dv_export_schedule_job_request_dto = DataVersionExportScheduleJobRequestDTO(
-        data_version_number=str(args.data_version),
-        base_data_version_number=str(args.base_data_version) if args.base_data_version is not None else None
-    )
-
-    export_metadata = dv_export.generate_data_version_export(dv_export_schedule_job_request_dto, max_num_polls, poll_interval_seconds)
+    export_metadata = dv_export.generate_data_version_export(args.data_version,
+                                                             args.base_data_version,
+                                                             max_num_polls,
+                                                             poll_interval_seconds)
     logger.info(f"Export metadata generated with export_uuid={export_metadata.uuid}")
 
 else:
