@@ -101,24 +101,19 @@ class DVExport:
         for file_info in file_infos:
             logger.info(f"Downloading file={file_info.name} with id={file_info.file_id} for table={tbl_name}")
 
-            # There are three possible functions to call to download an individual file from the export; in this
-            # case, we're using the first one, but the methods to call the others are provided as examples
+            # Get the ApiResponse
+            api_response = self.client.call_1_alpha_download_file_with_http_info(export_uuid=export_uuid, file_id=file_info.file_id)
+            if api_response.status_code == 200:
+                file_path = download_directory + file_info.name
+                with open(file_path, 'wb') as f:
+                    f.write(api_response.data)
+                file_paths.append(file_path)
+                logger.info(f"Downloaded file={file_info.name} with id={file_info.file_id} "
+                            f"for table={tbl_name} to file={file_path}")
+            else:
+                raise Exception(f"Failed to download file={file_info.name} with id={file_info.file_id} "
+                                f"for table={tbl_name}. Status code: {api_response.status_code}")
 
-            # Method 1: Returns the bytearray of the file
-            r = self.client.call_1_alpha_download_file(export_uuid=export_uuid, file_id=file_info.file_id)
-
-            # Method 2: Returns an ApiResponse with the bytearray as the data
-            #r = self.client.call_1_alpha_download_file_with_http_info(export_uuid=export_uuid, file_id=file_info.file_id).data
-
-            # Method 3: Return the response through a HTTPResponse
-            #r = self.client.call_1_alpha_download_file_without_preload_content(export_uuid=export_uuid, file_id=file_info.file_id).data
-
-            file_path = download_directory + file_info.name
-            with open(file_path, 'wb') as f:
-                f.write(r)
-            file_paths.append(file_path)
-            logger.info(f"Downloaded file={file_info.name} with id={file_info.file_id} "
-                        f"for table={tbl_name} to file={file_path}")
         return file_paths
 
     def _create_and_populate_new_table(self,
