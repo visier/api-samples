@@ -2,11 +2,10 @@ import argparse
 import shutil
 
 from dotenv import dotenv_values
-from visier.connector import VisierSession, make_auth
-from visier.api import DVExportApiClient
+from visier_platform_sdk import ApiClient, Configuration, DataVersionExportScheduleJobRequestDTO
+
 from data_store import *
-from dv_export import DVExport, DataVersions
-from constants import *
+from dv_export import DVExport
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,12 +19,10 @@ console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger()
 logger.addHandler(console_handler)
 
-config = {
+config_dict = {
     **dotenv_values('.env.dv-export'),
     **dotenv_values('.env.visier-auth')
 }
-
-auth = make_auth(env_values=config)
 
 parser = argparse.ArgumentParser(description='DV Export API example script.')
 parser.add_argument('-d', '--data_version', type=int,
@@ -40,30 +37,29 @@ args = parser.parse_args()
 if args.data_version is None and args.export_uuid is None:
     raise Exception(f"At least one of data_version or export_uuid must be provided")
 
+# Set up some parameters/objects from config used in the operation
+max_num_polls = int(config_dict[JOB_STATUS_NUM_POLLS])
+poll_interval_seconds = int(config_dict[JOB_STATUS_POLL_INTERVAL_SECONDS])
+delete_downloaded_files = True if config_dict[DELETE_BASE_DOWNLOAD_DIRECTORY_AFTER_EXPORT].upper() == 'TRUE' else False
+base_download_directory = config_dict[BASE_DOWNLOAD_DIRECTORY]
+store = SQLAlchemyDataStore(config_dict[DB_URL])
 
-with VisierSession(auth) as s:
-    dv_export_client = DVExportApiClient(s, raise_on_error=True)
+config = Configuration.from_dict(config_dict)
+client = ApiClient(config)
 
-    max_num_polls = int(config[JOB_STATUS_NUM_POLLS])
-    poll_interval_seconds = int(config[JOB_STATUS_POLL_INTERVAL_SECONDS])
-    delete_downloaded_files = True if config[DELETE_BASE_DOWNLOAD_DIRECTORY_AFTER_EXPORT].upper() == 'TRUE' else False
-    base_download_directory = config[BASE_DOWNLOAD_DIRECTORY]
+dv_export = DVExport(client, store, base_download_directory)
 
-    store = SQLAlchemyDataStore(config[DB_URL])
-    dv_export = DVExport(dv_export_client, store, base_download_directory)
+if args.export_uuid is None:
+    export_metadata = dv_export.generate_data_version_export(args.data_version,
+                                                             args.base_data_version,
+                                                             max_num_polls,
+                                                             poll_interval_seconds)
+    logger.info(f"Export metadata generated with export_uuid={export_metadata.uuid}")
 
-    if args.export_uuid is None:
-        data_version_info = DataVersions(
-            int(args.data_version),
-            int(args.base_data_version) if args.base_data_version is not None else None
-        )
-        export_metadata = dv_export.generate_data_version_export(data_version_info,
-                                                                 max_num_polls,
-                                                                 poll_interval_seconds)
-    else:
-        export_metadata = dv_export.get_export_metadata(args.export_uuid)
+else:
+    export_metadata = dv_export.get_export_metadata(args.export_uuid)
 
-    dv_export.process_metadata(export_metadata)
+dv_export.process_metadata(export_metadata)
 
-    if delete_downloaded_files:
-        shutil.rmtree(base_download_directory)
+if delete_downloaded_files:
+    shutil.rmtree(base_download_directory)

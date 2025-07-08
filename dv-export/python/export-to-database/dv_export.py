@@ -1,89 +1,96 @@
 import logging
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from visier.api import DVExportApiClient
+
+from visier_platform_sdk import ApiClient, DataVersionExportApi, DataVersionExportScheduleJobRequestDTO, \
+    DataVersionExportDTO, ApiException
+
 from data_store import DataStore
 from dv_export_model import FileInfo, TableInfo, ColumnInfoAndFileInfo, convert_table_metadata_into_table_infos
-from constants import *
 
 logger = logging.getLogger('dv_export')
-
-
-@dataclass
-class DataVersions:
-    data_version_number: int
-    base_data_version_number: Optional[int]
 
 
 class DVExport:
     """
     Orchestrates interactions between the ``DVExportApiClient`` and the output ``DataStore``
     """
-    def __init__(self, client: DVExportApiClient, data_store: DataStore, base_download_dir: str):
-        self.client = client
+    def __init__(self, client: ApiClient, data_store: DataStore, base_download_dir: str):
+        self.client = DataVersionExportApi(client)
         self.data_store = data_store
         self.base_download_dir = base_download_dir
 
     def generate_data_version_export(self,
-                                     dv_info: DataVersions,
+                                     data_version_number: int,
+                                     base_data_version_number: Optional[int],
                                      mx_num_polls: int,
-                                     poll_interval_secs: int) -> dict[str, any]:
-        job_id = self._schedule_export_job(dv_info)
-        export_id = self._get_export_id_when_job_finishes(job_id, mx_num_polls, poll_interval_secs)
-        metadata: dict[str, any] = self.get_export_metadata(export_id)
-        return metadata
+                                     poll_interval_secs: int
+                                     ) -> DataVersionExportDTO:
 
-    def _schedule_export_job(self, dv_info: DataVersions) -> str:
-        logger.info(f"Scheduling a data version export job for data_version_number={dv_info.data_version_number} "
-                    f"base_data_version_number={dv_info.base_data_version_number}")
-        if dv_info.base_data_version_number is None:
-            schedule_response = self.client.schedule_initial_data_version_export_job(dv_info.data_version_number)
-        else:
-            schedule_response = self.client.schedule_delta_data_version_export_job(dv_info.data_version_number,
-                                                                                   dv_info.base_data_version_number)
-        job_id: str = schedule_response.json()[JOB_UUID_KEY]
-        logger.info(f'Scheduled data version export job with job_id={job_id}')
-        return job_id
+        # Schedule a new export job
+        dv_export_schedule_job_request_dto = DataVersionExportScheduleJobRequestDTO(
+            data_version_number=str(data_version_number),
+            base_data_version_number=str(base_data_version_number) if base_data_version_number else None
+        )
+
+        job_id = self._schedule_export_job(dv_export_schedule_job_request_dto)
+        export_id = self._get_export_id_when_job_finishes(job_id, mx_num_polls, poll_interval_secs)
+        return self.get_export_metadata(export_id)
+
+    def _schedule_export_job(self,
+                             dv_export_schedule_job_request_dto: DataVersionExportScheduleJobRequestDTO
+                             ) -> str:
+        logger.info(f"Scheduling a data version export job for data_version_number={dv_export_schedule_job_request_dto.data_version_number} "
+                    f"base_data_version_number={dv_export_schedule_job_request_dto.base_data_version_number}")
+        try:
+            response = self.client.schedule_export_job(dv_export_schedule_job_request_dto)
+            job_id = response.job_uuid
+            logger.info(f"Scheduled data version export job with {job_id=}")
+            return job_id
+        except ApiException as e:
+            raise Exception(f"Failed to schedule data version export job with {dv_export_schedule_job_request_dto=}\n{e.body}", e)
 
     def _get_export_id_when_job_finishes(self,
                                          job_id: str,
                                          mx_num_polls: int,
                                          poll_interval_secs: int) -> str:
-        curr_poll = 0
-        export_id = ""
-        while curr_poll < mx_num_polls:
-            status_response = self.client.get_data_version_export_job_status(job_id)
-            if not status_response:
-                raise Exception(f"Failed to get export job status for job_id={job_id} response={repr(status_response)}")
+        export_id = None
+        counter = 1
+        while counter <= mx_num_polls:
+            try:
+                job_status = self.client.get_export_job_status(job_id)
 
-            status_response_json = status_response.json()
-            if status_response_json[EXPORT_JOB_FAILED_KEY]:
-                raise Exception(f"Data version export job_id={job_id} failed")
+                if job_status.failed:
+                    raise Exception(f"Data version export {job_id=} failed")
 
-            if status_response_json[EXPORT_JOB_COMPLETED_KEY]:
-                export_id = status_response_json[EXPORT_UUID_KEY]
-                logger.info(f"Export job_id={job_id} completed with export_id={export_id}")
-                break
+                if job_status.completed:
+                    export_id = job_status.export_uuid
+                    logger.info(f"Export {job_id=} completed with {export_id=}")
+                    break
 
-            repeat_msg = f"Trying again in {poll_interval_secs} seconds" if curr_poll != mx_num_polls - 1 else ""
-            logger.info(
-                f"(Attempt {curr_poll + 1} out of {mx_num_polls}) job_id={job_id} is still running. {repeat_msg}")
-            if curr_poll != mx_num_polls - 1:
-                time.sleep(poll_interval_secs)
-            curr_poll = curr_poll + 1
+                repeat_msg = f"Trying again in {poll_interval_secs} seconds" if counter <= mx_num_polls else ""
+                logger.info(f"(Attempt {counter} out of {mx_num_polls}) {job_id=} is still running. {repeat_msg}")
+                if repeat_msg:
+                    time.sleep(poll_interval_secs)
 
-        if export_id == "":
-            raise Exception(f"Failed to retrieve export_id after {curr_poll} polls")
+            except ApiException as e:
+                raise Exception(f"Failed to get export job status for {job_id=} response={repr(job_status)}\n{e.body}", e)
+
+            finally:
+                counter += 1
+
+        if export_id is None:
+            raise Exception(f"Failed to retrieve export_id after {mx_num_polls} attempts")
         return export_id
 
-    def get_export_metadata(self, export_id: str) -> dict[str, any]:
-        metadata_response = self.client.get_data_version_export_metadata(export_id)
-        if not metadata_response:
-            raise Exception(f"Failed to get export metadata for export_id={export_id}")
-        logger.info(f"Successfully retrieved metadata for export_id={export_id}")
-        return metadata_response.json()
+    def get_export_metadata(self, export_id: str) -> DataVersionExportDTO:
+        try:
+            response = self.client.get_export(export_id)
+            logger.info(f"Successfully retrieved export metadata for {export_id=}")
+            return response
+        except ApiException as e:
+            raise Exception(f"Failed to get export metadata for {export_id=}\n{e.body}", e)
 
     def _download_table_files_to_dir(self,
                                      export_uuid: str,
@@ -93,16 +100,20 @@ class DVExport:
         file_paths = []
         for file_info in file_infos:
             logger.info(f"Downloading file={file_info.name} with id={file_info.file_id} for table={tbl_name}")
-            with self.client.get_export_file(export_uuid, file_id=file_info.file_id) as r:
-                r.raise_for_status()
+
+            # Get the ApiResponse
+            api_response = self.client.call_1_alpha_download_file_with_http_info(export_uuid=export_uuid, file_id=file_info.file_id)
+            if api_response.status_code == 200:
                 file_path = download_directory + file_info.name
                 with open(file_path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=None):
-                        if chunk:
-                            f.write(chunk)
+                    f.write(api_response.data)
                 file_paths.append(file_path)
-            logger.info(f"Downloaded file={file_info.name} with id={file_info.file_id} "
-                        f"for table={tbl_name} to file={file_path}")
+                logger.info(f"Downloaded file={file_info.name} with id={file_info.file_id} "
+                            f"for table={tbl_name} to file={file_path}")
+            else:
+                raise Exception(f"Failed to download file={file_info.name} with id={file_info.file_id} "
+                                f"for table={tbl_name}. Status code: {api_response.status_code}")
+
         return file_paths
 
     def _create_and_populate_new_table(self,
@@ -151,7 +162,7 @@ class DVExport:
 
     def _handle_delta_export(self,
                              tables: list[TableInfo],
-                             metadata: dict[str, any],
+                             metadata: DataVersionExportDTO,
                              export_id: str):
         """
         Handle a delta export, where there could be new, existing, and/or deleted tables to operate on.
@@ -161,12 +172,12 @@ class DVExport:
         """
         logger.info(f"Performing delta export")
 
-        deleted_tables = metadata[DELETED_TABLES_KEY]
+        deleted_tables = metadata.deleted_tables
         for deleted_table in deleted_tables:
             logger.info(f"Dropping table={deleted_table}")
             self.data_store.drop_table(deleted_table)
 
-        new_tables = metadata[NEW_TABLES_KEY]
+        new_tables = metadata.new_tables
         new_table_infos = [tbl_info for tbl_info in tables if tbl_info.name in new_tables]
 
         self._create_and_populate_new_tables(new_table_infos, export_id)
@@ -190,17 +201,17 @@ class DVExport:
             itr += 1
 
     def process_metadata(self,
-                         metadata: dict[str, any]):
+                         metadata: DataVersionExportDTO):
         """
         Use the DV export metadata to create or update table definitions in output data store, download files for
         those tables, then insert records from those files into output data store.
 
         :param metadata: Full export metadata returned from a DV export job
         """
-        tables = convert_table_metadata_into_table_infos(metadata[TABLES_KEY])
-        export_id = metadata[UUID_KEY]
+        export_id = metadata.uuid
+        tables = convert_table_metadata_into_table_infos(metadata.tables)
 
-        is_initial_export = len(metadata[TABLES_KEY]) == len(metadata[NEW_TABLES_KEY])
+        is_initial_export = (len(metadata.tables) if metadata.tables else 0) == (len(metadata.new_tables) if metadata.new_tables else 0)
 
         if is_initial_export:
             self._create_and_populate_new_tables(tables, export_id)
