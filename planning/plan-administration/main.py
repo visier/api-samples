@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from pandas import DataFrame
 import json
+from datetime import datetime, timezone
 
 from visier_platform_sdk import (
     ApiClient, Configuration, PlanAdministrationApi, DataModelApi, GetPlanListResponseDTO,
@@ -29,6 +30,18 @@ config = Configuration.from_env()
 api_client = ApiClient(config)
 data_load_api = DataModelApi()
 plan_admin_api = PlanAdministrationApi(api_client)
+
+# Calculate start of today once to ensure consistency across all plans
+def get_start_of_today_timestamp() -> int:
+    """
+    Get the start of today in local time as a Unix timestamp in milliseconds.
+    :return: Unix timestamp in milliseconds for start of today (00:00:00)
+    """
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    return int(today.timestamp() * 1000)
+
+# Cache the start of today timestamp to ensure all plans use the same value
+START_OF_TODAY_MS = get_start_of_today_timestamp()
 
 
 def list_plans() -> GetPlanListResponseDTO:
@@ -323,7 +336,8 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
         # Build the payload using the appropriate action classes
         from visier_platform_sdk import PlanPatchStartCollaborationActionRequest, StartCollaborationActionPayload, PlanScenarioPatchRequest
         
-        start_collab_payload = StartCollaborationActionPayload()
+        # Use the cached start of today timestamp for consistency (as string)
+        start_collab_payload = StartCollaborationActionPayload(startDate=str(START_OF_TODAY_MS))
         request = PlanPatchStartCollaborationActionRequest(
             actionType="StartCollaboration",
             startCollaborationActionPayload=start_collab_payload
@@ -339,7 +353,7 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
-        print(f"Successfully started collaboration for plan {plan_uuid}")
+        print(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S')}")
         return True
         
     except Exception as e:
@@ -477,12 +491,14 @@ def process_plan_right_to_left(plan: Dict, scenario_id: str) -> bool:
     """
     plan_uuid = plan.get('uuid')
     plan_name = plan.get('display_name', 'Unnamed Plan')
+    parent_plan_uuid = plan.get('parent_plan_uuid')
+    is_root_plan = not parent_plan_uuid
     
     if not plan_uuid:
         print(f"No UUID found for plan: {plan_name}")
         return False
     
-    print(f"\nProcessing plan: {plan_name} ({plan_uuid})")
+    print(f"\nProcessing plan: {plan_name} ({plan_uuid})" + (" [ROOT PLAN]" if is_root_plan else ""))
     
     # Get schema to check for open collaboration
     try:
@@ -508,17 +524,24 @@ def process_plan_right_to_left(plan: Dict, scenario_id: str) -> bool:
                 print(f"Failed to close collaboration for plan: {plan_name}")
                 return False
             
-            # Step 3: Submit
-            if not submit_plan(plan_uuid, scenario_id):
-                print(f"Failed to submit plan: {plan_name}")
-                return False
+            # Step 3: Submit (skip for root plans)
+            if is_root_plan:
+                print(f"Skipping submit for root plan: {plan_name} - root plans should not be submitted")
+            else:
+                if not submit_plan(plan_uuid, scenario_id):
+                    print(f"Failed to submit plan: {plan_name}")
+                    return False
         else:
-            print(f"Plan {plan_name} has no open collaboration - submitting directly")
+            print(f"Plan {plan_name} has no open collaboration")
             
-            # Submit directly
-            if not submit_plan(plan_uuid, scenario_id):
-                print(f"Failed to submit plan: {plan_name}")
-                return False
+            # Submit directly (skip for root plans)
+            if is_root_plan:
+                print(f"Skipping submit for root plan: {plan_name} - root plans should not be submitted")
+            else:
+                print(f"Submitting plan directly")
+                if not submit_plan(plan_uuid, scenario_id):
+                    print(f"Failed to submit plan: {plan_name}")
+                    return False
         
         return True
         
@@ -576,6 +599,8 @@ def process_plan_left_to_right(plan: Dict, scenario_id: str, all_plans: Dict[str
 
 def main():
     print("Starting plans retrieval...")
+    print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S')} ({START_OF_TODAY_MS}ms)")
+    
     plans = list_plans()
     if not plans:
         print("No plans found.")
