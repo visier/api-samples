@@ -1,3 +1,3 @@
-pandas
-python-dotenv
+pandas==2.3.2
+python-dotenv==1.1.1
 visier-platform-sdk==22222222.99201.2176.post3
