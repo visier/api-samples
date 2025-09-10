@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from pandas import DataFrame
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from visier_platform_sdk import (
     ApiClient, Configuration, PlanAdministrationApi, DataModelApi, GetPlanListResponseDTO,
@@ -34,11 +34,25 @@ plan_admin_api = PlanAdministrationApi(api_client)
 # Calculate start of today once to ensure consistency across all plans
 def get_start_of_today_timestamp() -> int:
     """
-    Get the start of today in local time as a Unix timestamp in milliseconds.
-    :return: Unix timestamp in milliseconds for start of today (00:00:00)
+    Get the start of today in UTC time as a Unix timestamp in milliseconds.
+    If UTC now is the next day compared to local time, move it back one day,
+    then set to the start of that UTC day (00:00:00 UTC).
+    :return: Unix timestamp in milliseconds for start of day (00:00:00 UTC)
     """
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    return int(today.timestamp() * 1000)
+    utc_now = datetime.now(timezone.utc)
+    local_now = datetime.now()
+    
+    # Check if UTC date is next day compared to local date
+    if utc_now.date() > local_now.date():
+        # Move UTC back one day
+        utc_target_date = utc_now.date() - timedelta(days=1)
+    else:
+        # Use current UTC date
+        utc_target_date = utc_now.date()
+    
+    # Create start of day in UTC (00:00:00 UTC)
+    start_of_day_utc = datetime.combine(utc_target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    return int(start_of_day_utc.timestamp() * 1000)
 
 # Cache the start of today timestamp to ensure all plans use the same value
 START_OF_TODAY_MS = get_start_of_today_timestamp()
@@ -353,7 +367,7 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
-        print(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
         return True
         
     except Exception as e:
@@ -599,7 +613,7 @@ def process_plan_left_to_right(plan: Dict, scenario_id: str, all_plans: Dict[str
 
 def main():
     print("Starting plans retrieval...")
-    print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S')} ({START_OF_TODAY_MS}ms)")
+    print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} ({START_OF_TODAY_MS}ms)")
     
     plans = list_plans()
     if not plans:
