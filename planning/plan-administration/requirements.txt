@@ -1,5 +1,3 @@
-pandas==2.2.3
-python-dotenv==1.0.1
-visier_api_analytic_model==0.99201.1656
-visier_api_core==0.99201.1701
-visier_api_data_in==0.99201.1701
+pandas
+python-dotenv
+visier-platform-sdk==22222222.99201.2176.post3

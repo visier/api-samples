@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Set
+from typing import Dict, List, Optional, Set
 
 import pandas as pd
 import os
@@ -6,10 +6,17 @@ from dotenv import load_dotenv
 from pandas import DataFrame
 import json
 
-from visier_api_core import ApiClient, Configuration
-from visier_api_analytic_model import DataModelApi, GetPlanListResponseDTO
+from visier_platform_sdk import (
+    ApiClient, Configuration, PlanAdministrationApi, DataModelApi, GetPlanListResponseDTO,
+    CollaborationInfo, PlanWithSchemaDTO
+)
 
-from plan_schema import *
+# Define CollaborationStatus enum locally since it might not be in the SDK
+from enum import Enum
+
+class CollaborationStatus(Enum):
+    Closed = "Closed"
+    Open = "Open"
 
 load_dotenv()
 
@@ -21,6 +28,7 @@ TARGET_PLAN_NAME: str = target_plan_name
 config = Configuration.from_env()
 api_client = ApiClient(config)
 data_load_api = DataModelApi()
+plan_admin_api = PlanAdministrationApi(api_client)
 
 
 def list_plans() -> GetPlanListResponseDTO:
@@ -54,7 +62,7 @@ def list_plans() -> GetPlanListResponseDTO:
         # Return empty response if no plans found
         return response
 
-def get_schema(plan_uuid: str) -> Optional[ExtendedPlanSchemaDTO]:
+def get_schema(plan_uuid: str) -> Optional[PlanWithSchemaDTO]:
     """
     Retrieves the schema for the specified plan UUID.
     :param plan_uuid: UUID of the plan to get schema for.
@@ -65,59 +73,39 @@ def get_schema(plan_uuid: str) -> Optional[ExtendedPlanSchemaDTO]:
     
     print(f"Fetching plan schema for plan with id: {plan_uuid}")
 
-    # Build the API endpoint and parameters
-    resource_path = f"/v1alpha/planning/model/plans/{plan_uuid}"
-    method = "GET"
-    header_params = {"Accept": "application/json"}
-
-    # Call the API
-    response = api_client.call_api(
-        method=method,
-        url=api_client.configuration.host + resource_path,
-        header_params=header_params
-    ).response
-
-    # Check status code
-    if response.status != 200:
-        response_text = response.data.decode("utf-8") if isinstance(response.data, bytes) else response.data
-        raise ValueError(f"API call failed with status {response.status}: {response.reason}\nResponse: {response_text}")
-
-    # Deserialize response data
-    response_json = response.data.decode("utf-8") if isinstance(response.data, bytes) else response.data
-    if response_json is None:
-        raise ValueError("No response data received")
-    response_dict = json.loads(response_json)
-    # Extract the plan object from the response
-    plan_data = response_dict.get('plan', response_dict)
-    print("Successfully retrieved plan details and schema!")
-    # Log the retrieved schema
-    print(f"Retrieved plan schema: {json.dumps(plan_data, indent=2)}")
-
     try:
-        return ExtendedPlanSchemaDTO.model_validate(plan_data)
+        # Use the dedicated API method
+        response = data_load_api.plan_info_with_schema(plan_uuid)
+        
+        print("Successfully retrieved plan details and schema!")
+        # Log the retrieved schema
+        print(f"Retrieved plan schema: {json.dumps(response.model_dump() if hasattr(response, 'model_dump') else response, indent=2, default=str)}")
+
+        return response
     except Exception as e:
-        print(f"Failed to validate plan schema: {str(e)}")
-        print(f"Response data: {json.dumps(plan_data, indent=2)}")
+        print(f"Failed to retrieve plan schema: {str(e)}")
         raise
 
-def find_open_or_latest_collaboration(schema: ExtendedPlanSchemaDTO) -> Optional[CollaborationInfo]:
+def find_open_or_latest_collaboration(schema: PlanWithSchemaDTO) -> Optional[CollaborationInfo]:
     """
     Finds the open or latest collaboration in the given plan schema.
     :param schema: The plan schema to search within.
     :return: The open or latest collaboration, if found.
     """
-    if not schema.collaborations:
+    # Get collaborations from the plan object within the schema
+    plan = schema.plan
+    if not hasattr(plan, 'collaborations') or not plan.collaborations:
         return None
 
     # Find the open collaboration or the latest one
     # Check for both enum and string values since the API returns strings
-    open_collab = next((c for c in schema.collaborations 
+    open_collab = next((c for c in plan.collaborations 
                        if (c.status == CollaborationStatus.Open.value)), None)
     if open_collab:
         return open_collab
 
-    # If no open collaboration, return the latest one
-    return max(schema.collaborations, key=lambda c: c.updatedDate, default=None)
+    # If no open collaboration, return the latest one based on updated_date
+    return max(plan.collaborations, key=lambda c: c.updated_date or 0, default=None)
 
 def build_plan_tree(plans_response: GetPlanListResponseDTO) -> tuple[List[Dict], Dict[str, Dict]]:
     """
@@ -216,44 +204,32 @@ def find_leaf_plans(plan_tree: Dict) -> List[Dict]:
 
 def submit_plan(plan_uuid: str, scenario_id: str) -> bool:
     """
-    Submits a plan using the PATCH API.
+    Submits a plan using the dedicated API method.
     :param plan_uuid: UUID of the plan to submit
     :param scenario_id: UUID of the scenario to submit
     :return: True if successful, False otherwise
     """
     print(f"Submitting plan {plan_uuid} with scenario {scenario_id}")
     
-    # Build the API endpoint and parameters
-    resource_path = f"/v1alpha/planning/data/plans/{plan_uuid}/scenarios/{scenario_id}"
-    method = "PATCH"
-    header_params = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    # Build the payload
-    payload = {
-        "actionType": "Submit",
-        "submitActionPayload": {
-            "comment": "by script"
-        }
-    }
-    
     try:
-        # Call the API
-        response = api_client.call_api(
-            method=method,
-            url=api_client.configuration.host + resource_path,
-            header_params=header_params,
-            body=payload
+        # Build the payload using the appropriate action classes
+        from visier_platform_sdk import PlanPatchSubmitActionRequest, SubmitActionPayload, PlanScenarioPatchRequest
+        
+        submit_payload = SubmitActionPayload(comment="by script")
+        request = PlanPatchSubmitActionRequest(
+            actionType="Submit",
+            submitActionPayload=submit_payload
         )
         
-        # Check status code
-        if response.response.status != 200:
-            response_text = response.response.data.decode("utf-8") if isinstance(response.response.data, bytes) else response.response.data
-            print(f"Failed to submit plan {plan_uuid}: Status {response.response.status} - {response.response.reason}")
-            print(f"Response: {response_text}")
-            return False
+        # Wrap in PlanScenarioPatchRequest
+        patch_request = PlanScenarioPatchRequest(actual_instance=request)
+        
+        # Call the dedicated API method
+        response = plan_admin_api.patch_plan(
+            plan_id=plan_uuid,
+            scenario_id=scenario_id,
+            plan_scenario_patch_request=patch_request
+        )
         
         print(f"Successfully submitted plan {plan_uuid}")
         return True
@@ -264,44 +240,32 @@ def submit_plan(plan_uuid: str, scenario_id: str) -> bool:
 
 def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
     """
-    Consolidates a plan using the PATCH API.
+    Consolidates a plan using the dedicated API method.
     :param plan_uuid: UUID of the plan to consolidate
     :param scenario_id: UUID of the scenario to consolidate
     :return: True if successful, False otherwise
     """
     print(f"Consolidating plan {plan_uuid} with scenario {scenario_id}")
     
-    # Build the API endpoint and parameters
-    resource_path = f"/v1alpha/planning/data/plans/{plan_uuid}/scenarios/{scenario_id}"
-    method = "PATCH"
-    header_params = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    # Build the payload
-    payload = {
-        "actionType": "Consolidate",
-        "consolidateActionPayload": {
-            "autoRollup": True
-        }
-    }
-    
     try:
-        # Call the API
-        response = api_client.call_api(
-            method=method,
-            url=api_client.configuration.host + resource_path,
-            header_params=header_params,
-            body=payload
+        # Build the payload using the appropriate action classes
+        from visier_platform_sdk import PlanPatchConsolidateActionRequest, ConsolidateActionPayload, PlanScenarioPatchRequest
+        
+        consolidate_payload = ConsolidateActionPayload(autoRollup=True)
+        request = PlanPatchConsolidateActionRequest(
+            actionType="Consolidate",
+            consolidateActionPayload=consolidate_payload
         )
         
-        # Check status code
-        if response.response.status != 200:
-            response_text = response.response.data.decode("utf-8") if isinstance(response.response.data, bytes) else response.response.data
-            print(f"Failed to consolidate plan {plan_uuid}: Status {response.response.status} - {response.response.reason}")
-            print(f"Response: {response_text}")
-            return False
+        # Wrap in PlanScenarioPatchRequest
+        patch_request = PlanScenarioPatchRequest(actual_instance=request)
+        
+        # Call the dedicated API method
+        response = plan_admin_api.patch_plan(
+            plan_id=plan_uuid,
+            scenario_id=scenario_id,
+            plan_scenario_patch_request=patch_request
+        )
         
         print(f"Successfully consolidated plan {plan_uuid}")
         return True
@@ -312,44 +276,32 @@ def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
 
 def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
     """
-    Closes a collaboration using the PATCH API.
+    Closes a collaboration using the dedicated API method.
     :param plan_uuid: UUID of the plan to close collaboration for
     :param scenario_id: UUID of the scenario to close collaboration for
     :return: True if successful, False otherwise
     """
     print(f"Closing collaboration for plan {plan_uuid} with scenario {scenario_id}")
     
-    # Build the API endpoint and parameters
-    resource_path = f"/v1alpha/planning/data/plans/{plan_uuid}/scenarios/{scenario_id}"
-    method = "PATCH"
-    header_params = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    # Build the payload
-    payload = {
-        "actionType": "EndCollaboration",
-        "endCollaborationActionPayload": {
-            "actionWhenUnconsolidatedPlansExists": "Ignore"
-        }
-    }
-    
     try:
-        # Call the API
-        response = api_client.call_api(
-            method=method,
-            url=api_client.configuration.host + resource_path,
-            header_params=header_params,
-            body=payload
+        # Build the payload using the appropriate action classes
+        from visier_platform_sdk import PlanPatchEndCollaborationActionRequest, EndCollaborationActionPayload, PlanScenarioPatchRequest
+        
+        end_collab_payload = EndCollaborationActionPayload(actionWhenUnconsolidatedPlansExists="Ignore")
+        request = PlanPatchEndCollaborationActionRequest(
+            actionType="EndCollaboration",
+            endCollaborationActionPayload=end_collab_payload
         )
         
-        # Check status code
-        if response.response.status != 200:
-            response_text = response.response.data.decode("utf-8") if isinstance(response.response.data, bytes) else response.response.data
-            print(f"Failed to close collaboration for plan {plan_uuid}: Status {response.response.status} - {response.response.reason}")
-            print(f"Response: {response_text}")
-            return False
+        # Wrap in PlanScenarioPatchRequest
+        patch_request = PlanScenarioPatchRequest(actual_instance=request)
+        
+        # Call the dedicated API method
+        response = plan_admin_api.patch_plan(
+            plan_id=plan_uuid,
+            scenario_id=scenario_id,
+            plan_scenario_patch_request=patch_request
+        )
         
         print(f"Successfully closed collaboration for plan {plan_uuid}")
         return True
@@ -360,42 +312,32 @@ def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
 
 def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
     """
-    Starts a collaboration using the PATCH API.
+    Starts a collaboration using the dedicated API method.
     :param plan_uuid: UUID of the plan to start collaboration for
     :param scenario_id: UUID of the scenario to start collaboration for
     :return: True if successful, False otherwise
     """
     print(f"Starting collaboration for plan {plan_uuid} with scenario {scenario_id}")
     
-    # Build the API endpoint and parameters
-    resource_path = f"/v1alpha/planning/data/plans/{plan_uuid}/scenarios/{scenario_id}"
-    method = "PATCH"
-    header_params = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    # Build the payload
-    payload = {
-        "actionType": "StartCollaboration",
-        "startCollaborationActionPayload": {}
-    }
-    
     try:
-        # Call the API
-        response = api_client.call_api(
-            method=method,
-            url=api_client.configuration.host + resource_path,
-            header_params=header_params,
-            body=payload
+        # Build the payload using the appropriate action classes
+        from visier_platform_sdk import PlanPatchStartCollaborationActionRequest, StartCollaborationActionPayload, PlanScenarioPatchRequest
+        
+        start_collab_payload = StartCollaborationActionPayload()
+        request = PlanPatchStartCollaborationActionRequest(
+            actionType="StartCollaboration",
+            startCollaborationActionPayload=start_collab_payload
         )
         
-        # Check status code
-        if response.response.status != 200:
-            response_text = response.response.data.decode("utf-8") if isinstance(response.response.data, bytes) else response.response.data
-            print(f"Failed to start collaboration for plan {plan_uuid}: Status {response.response.status} - {response.response.reason}")
-            print(f"Response: {response_text}")
-            return False
+        # Wrap in PlanScenarioPatchRequest
+        patch_request = PlanScenarioPatchRequest(actual_instance=request)
+        
+        # Call the dedicated API method
+        response = plan_admin_api.patch_plan(
+            plan_id=plan_uuid,
+            scenario_id=scenario_id,
+            plan_scenario_patch_request=patch_request
+        )
         
         print(f"Successfully started collaboration for plan {plan_uuid}")
         return True
@@ -406,44 +348,32 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
 
 def reopen_plan(plan_uuid: str, scenario_id: str) -> bool:
     """
-    Reopens a plan using the PATCH API.
+    Reopens a plan using the dedicated API method.
     :param plan_uuid: UUID of the plan to reopen
     :param scenario_id: UUID of the scenario to reopen
     :return: True if successful, False otherwise
     """
     print(f"Reopening plan {plan_uuid} with scenario {scenario_id}")
     
-    # Build the API endpoint and parameters
-    resource_path = f"/v1alpha/planning/data/plans/{plan_uuid}/scenarios/{scenario_id}"
-    method = "PATCH"
-    header_params = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    # Build the payload
-    payload = {
-        "actionType": "Reopen",
-        "reopenActionPayload": {
-        
-        }
-    }
-    
     try:
-        # Call the API
-        response = api_client.call_api(
-            method=method,
-            url=api_client.configuration.host + resource_path,
-            header_params=header_params,
-            body=payload
+        # Build the payload using the appropriate action classes
+        from visier_platform_sdk import PlanPatchReopenActionRequest, ReopenActionPayload, PlanScenarioPatchRequest
+        
+        reopen_payload = ReopenActionPayload()
+        request = PlanPatchReopenActionRequest(
+            actionType="Reopen",
+            reopenActionPayload=reopen_payload
         )
         
-        # Check status code
-        if response.response.status != 200:
-            response_text = response.response.data.decode("utf-8") if isinstance(response.response.data, bytes) else response.response.data
-            print(f"Failed to reopen plan {plan_uuid}: Status {response.response.status} - {response.response.reason}")
-            print(f"Response: {response_text}")
-            return False
+        # Wrap in PlanScenarioPatchRequest
+        patch_request = PlanScenarioPatchRequest(actual_instance=request)
+        
+        # Call the dedicated API method
+        response = plan_admin_api.patch_plan(
+            plan_id=plan_uuid,
+            scenario_id=scenario_id,
+            plan_scenario_patch_request=patch_request
+        )
         
         print(f"Successfully reopened plan {plan_uuid}")
         return True
@@ -686,9 +616,13 @@ def main():
         return
         
     print("Found collaboration:")
-    print(f"  Scenario ID: {collaboration.scenarioId}")
+    print(f"  Scenario ID: {collaboration.scenario_id}")
     print(f"  Status: {collaboration.status}")
-    scenario_id = collaboration.scenarioId
+    scenario_id = collaboration.scenario_id
+    
+    if not scenario_id:
+        print("No scenario ID found in collaboration.")
+        return
     
     # Build hierarchy ordered from right (deepest) to left (shallowest)
     print(f"\nBuilding right-to-left hierarchy...")
