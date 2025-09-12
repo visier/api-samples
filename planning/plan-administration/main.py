@@ -58,6 +58,36 @@ def get_start_of_today_timestamp() -> int:
 START_OF_TODAY_MS = get_start_of_today_timestamp()
 
 
+def check_plan_operation_response(response, plan_uuid: str, operation_name: str) -> bool:
+    """
+    Check the response from a plan operation for errors.
+    :param response: The response from the plan operation API call
+    :param plan_uuid: UUID of the plan being operated on
+    :param operation_name: Name of the operation (for error messages)
+    :return: True if successful or RCIP991031 error (continue processing), False for other errors
+    """
+    # Check response for errors in actionResults
+    if hasattr(response, 'action_results') and response.action_results:
+        for action_result in response.action_results:
+            if hasattr(action_result, 'success') and not action_result.success:
+                # Check if this is the specific "plan needs to be open" error
+                if hasattr(action_result, 'error') and action_result.error:
+                    error_rci = action_result.error.rci if action_result.error.rci else ''
+                    error_message = action_result.error.message if action_result.error.message else 'Unknown error'
+                    if error_rci == 'RCIP991031':
+                        print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+                        return True
+                    else:
+                        print(f"Failed to {operation_name} plan {plan_uuid}: {error_message} (rci: {error_rci})")
+                        return False
+                else:
+                    print(f"Failed to {operation_name} plan {plan_uuid}: Action result indicates failure")
+                    return False
+    
+    # If we get here, the operation was successful
+    return True
+
+
 def list_plans() -> GetPlanListResponseDTO:
     """
     Retrieves all plans by paginating through all pages.
@@ -258,12 +288,22 @@ def submit_plan(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
+        # Check response for errors
+        if not check_plan_operation_response(response, plan_uuid, "submit"):
+            return False
+        
         print(f"Successfully submitted plan {plan_uuid}")
         return True
         
     except Exception as e:
-        print(f"Failed to submit plan {plan_uuid}: {str(e)}")
-        return False
+        error_message = str(e)
+        # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        if "RCIP991031" in error_message:
+            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            return True  # Treat this as success to continue processing
+        else:
+            print(f"Failed to submit plan {plan_uuid}: {error_message}")
+            return False
 
 def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
     """
@@ -294,12 +334,22 @@ def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
+        # Check response for errors
+        if not check_plan_operation_response(response, plan_uuid, "consolidate"):
+            return False
+        
         print(f"Successfully consolidated plan {plan_uuid}")
         return True
         
     except Exception as e:
-        print(f"Failed to consolidate plan {plan_uuid}: {str(e)}")
-        return False
+        error_message = str(e)
+        # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        if "RCIP991031" in error_message:
+            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            return True  # Treat this as success to continue processing
+        else:
+            print(f"Failed to consolidate plan {plan_uuid}: {error_message}")
+            return False
 
 def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
     """
@@ -330,12 +380,22 @@ def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
+        # Check response for errors
+        if not check_plan_operation_response(response, plan_uuid, "close collaboration for"):
+            return False
+        
         print(f"Successfully closed collaboration for plan {plan_uuid}")
         return True
         
     except Exception as e:
-        print(f"Failed to close collaboration for plan {plan_uuid}: {str(e)}")
-        return False
+        error_message = str(e)
+        # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        if "RCIP991031" in error_message:
+            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            return True  # Treat this as success to continue processing
+        else:
+            print(f"Failed to close collaboration for plan {plan_uuid}: {error_message}")
+            return False
 
 def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
     """
@@ -367,12 +427,22 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
+        # Check response for errors
+        if not check_plan_operation_response(response, plan_uuid, "start collaboration for"):
+            return False
+        
         print(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
         return True
         
     except Exception as e:
-        print(f"Failed to start collaboration for plan {plan_uuid}: {str(e)}")
-        return False
+        error_message = str(e)
+        # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        if "RCIP991031" in error_message:
+            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            return True  # Treat this as success to continue processing
+        else:
+            print(f"Failed to start collaboration for plan {plan_uuid}: {error_message}")
+            return False
 
 def reopen_plan(plan_uuid: str, scenario_id: str) -> bool:
     """
@@ -403,12 +473,22 @@ def reopen_plan(plan_uuid: str, scenario_id: str) -> bool:
             plan_scenario_patch_request=patch_request
         )
         
+        # Check response for errors
+        if not check_plan_operation_response(response, plan_uuid, "reopen"):
+            return False
+        
         print(f"Successfully reopened plan {plan_uuid}")
         return True
         
     except Exception as e:
-        print(f"Failed to reopen plan {plan_uuid}: {str(e)}")
-        return False
+        error_message = str(e)
+        # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        if "RCIP991031" in error_message:
+            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            return True  # Treat this as success to continue processing
+        else:
+            print(f"Failed to reopen plan {plan_uuid}: {error_message}")
+            return False
 
 def find_parent_plans(leaf_plans: List[Dict], all_plans: Dict[str, Dict]) -> List[Dict]:
     """
@@ -617,7 +697,7 @@ def main():
     
     plans = list_plans()
     if not plans:
-        print("No plans found.")
+        print("CRITICAL ERROR: No plans found.")
         return
     
     # Build and display the plan tree
@@ -632,26 +712,26 @@ def main():
     target_plan = find_target_plan(plans_tree, TARGET_PLAN_NAME)
     
     if not target_plan:
-        print(f"Plan '{TARGET_PLAN_NAME}' not found.")
+        print(f"CRITICAL ERROR: Plan '{TARGET_PLAN_NAME}' not found.")
         return
     
     print(f"Found target plan: {target_plan.get('display_name')} ({target_plan.get('uuid')})")
     root_plan_uuid = target_plan.get('uuid')
     
     if not root_plan_uuid:
-        print("Root plan UUID not found.")
+        print("CRITICAL ERROR: Root plan UUID not found.")
         return
     
     # Get collaboration info for the target plan
     plan_schema = get_schema(root_plan_uuid)
     if not plan_schema:
-        print("Failed to retrieve plan collaboration info.")
+        print("CRITICAL ERROR: Failed to retrieve plan collaboration info.")
         return
     
     # Find collaboration info
     collaboration = find_open_or_latest_collaboration(plan_schema)
     if not collaboration:
-        print("No collaboration found for this plan.")
+        print("CRITICAL ERROR: No collaboration found for this plan.")
         return
         
     print("Found collaboration:")
@@ -660,7 +740,7 @@ def main():
     scenario_id = collaboration.scenario_id
     
     if not scenario_id:
-        print("No scenario ID found in collaboration.")
+        print("CRITICAL ERROR: No scenario ID found in collaboration.")
         return
     
     # Build hierarchy ordered from right (deepest) to left (shallowest)
@@ -682,7 +762,9 @@ def main():
         if process_plan_right_to_left(plan, scenario_id):
             successful_plans.append(plan)
         else:
-            print(f"Failed to process plan: {plan.get('display_name')}")
+            print(f"CRITICAL ERROR: Failed to process plan: {plan.get('display_name')}")
+            print("Operation terminated due to error.")
+            return
     
     print(f"\nPhase 1 complete: {len(successful_plans)}/{len(ordered_plans)} plans processed successfully.")
     
@@ -704,7 +786,9 @@ def main():
         if process_plan_left_to_right(plan, scenario_id, all_plans):
             collaboration_success_count += 1
         else:
-            print(f"Failed to process collaboration for plan: {plan.get('display_name')}")
+            print(f"CRITICAL ERROR: Failed to process collaboration for plan: {plan.get('display_name')}")
+            print("Operation terminated due to error.")
+            return
     
     print(f"\nPhase 2 complete: {collaboration_success_count}/{len(left_to_right_plans)} plans processed successfully.")
     
@@ -715,4 +799,11 @@ def main():
     print(f"Phase 2 (Left-to-Right): {collaboration_success_count}/{len(left_to_right_plans)} plans processed")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"\nCRITICAL ERROR: Unexpected error occurred: {str(e)}")
+        print("Operation terminated due to unexpected error.")
+        import traceback
+        traceback.print_exc()
+        exit(1)
