@@ -1,6 +1,6 @@
 # Planning Data Load
 
-This is a sample script that pulls data from a source file and loads it into a specific plan and scenario using the [Planning Data Load API](https://docs.visier.com/visier-people/Default.htm#cshid=1053). In this example, the source file is `source.csv`.
+This is a sample script that consolidate all subplan data to the root plan then reopen the collaborations for the next time using the [Plan Administration API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/PlanAdministration)
 
 # Getting Started
 
