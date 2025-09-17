@@ -21,6 +21,35 @@ class CollaborationStatus(Enum):
 
 load_dotenv()
 
+"""
+PLAN HIERARCHY TERMINOLOGY:
+
+Root Plans:
+- Top-level plans in the hierarchy that have no parent plan
+- These are the main/primary plans that contain all subplans
+- Identified by having parent_plan_uuid = None or empty
+- Root plans should NOT be submitted during processing as they serve as containers
+- Example: "Annual Budget 2024" might be a root plan
+
+Leaf Plans:
+- Bottom-level plans in the hierarchy that have no child plans (subplans)
+- These are the most granular plans where actual work/data entry happens
+- Identified by having an empty subplans list or no subplans
+- Leaf plans are typically submitted as part of the workflow
+- Example: "Q1 Sales Team Budget" might be a leaf plan under a quarterly root plan
+
+Intermediate Plans:
+- Plans that have both a parent (not root) and children (not leaf)
+- These serve as organizational containers between root and leaf levels
+- Example: "Q1 Budget" under "Annual Budget 2024" with team-specific subplans
+
+Processing Order:
+- Leaf-to-Root (Leaf-to-Root): Process deepest plans first, moving toward root
+  Used for consolidation, submission, and closing collaborations
+- Root-to-Leaf (Root-to-Leaf): Process shallowest plans first, moving toward leaves
+  Used for starting collaborations and reopening plans
+"""
+
 target_plan_name = os.getenv('TARGET_PLAN_NAME')
 if target_plan_name is None:
     raise ValueError("TARGET_PLAN_NAME environment variable must be defined")
@@ -508,13 +537,13 @@ def find_parent_plans(leaf_plans: List[Dict], all_plans: Dict[str, Dict]) -> Lis
     
     return parent_plans
 
-def build_hierarchy_right_to_left(target_plan: Dict, all_plans: Dict[str, Dict]) -> List[Dict]:
+def build_hierarchy_leaf_to_root(target_plan: Dict, all_plans: Dict[str, Dict]) -> List[Dict]:
     """
     Builds a hierarchy where no node is a parent of any node to its left.
-    Returns plans ordered from right (deepest) to left (shallowest).
+    Returns plans ordered from leaf (deepest) to root (shallowest).
     :param target_plan: The root plan to analyze
     :param all_plans: Dictionary of all plans indexed by UUID
-    :return: List of plans ordered from deepest to shallowest
+    :return: List of plans ordered from deepest to shallowest (leaf to root)
     """
     def get_distance_from_root(plan_uuid: str, root_uuid: str, visited: Optional[Set[str]] = None) -> int:
         """Calculate how many levels deep this plan is from the root."""
@@ -558,7 +587,7 @@ def build_hierarchy_right_to_left(target_plan: Dict, all_plans: Dict[str, Dict])
     if not root_uuid:
         return all_target_plans  # Return unsorted if no root UUID
     
-    # Sort plans by distance from root (deepest first - right to left)
+    # Sort plans by distance from root (deepest first - leaf to root)
     all_target_plans.sort(key=lambda p: get_distance_from_root(p.get('uuid', ''), root_uuid), reverse=True)
     
     return all_target_plans
@@ -576,9 +605,17 @@ def get_child_plans(parent_uuid: str, all_plans: Dict[str, Dict]) -> List[Dict]:
             child_plans.append(plan)
     return child_plans
 
-def process_plan_right_to_left(plan: Dict, scenario_id: str) -> bool:
+def process_plan_leaf_to_root(plan: Dict, scenario_id: str) -> bool:
     """
-    Process a single plan according to the right-to-left rule.
+    Process a single plan according to the leaf-to-root rule.
+    
+    In the plan hierarchy:
+    - Root plans: Top-level plans with no parent (parent_plan_uuid is None)
+    - Leaf plans: Bottom-level plans with no children/subplans
+    
+    This function processes plans from leaf (deepest) to root (shallowest), handling
+    consolidation, submission, and closing collaborations.
+    
     :param plan: Plan dictionary to process
     :param scenario_id: Scenario ID for API calls
     :return: True if processing was successful
@@ -643,9 +680,17 @@ def process_plan_right_to_left(plan: Dict, scenario_id: str) -> bool:
         print(f"Error processing plan {plan_name}: {str(e)}")
         return False
 
-def process_plan_left_to_right(plan: Dict, scenario_id: str, all_plans: Dict[str, Dict]) -> bool:
+def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str, Dict]) -> bool:
     """
-    Process a single plan in the left-to-right phase (start collaboration and reopen children).
+    Process a single plan in the root-to-leaf phase (start collaboration and reopen children).
+    
+    In the plan hierarchy:
+    - Root plans: Top-level plans with no parent (parent_plan_uuid is None)
+    - Leaf plans: Bottom-level plans with no children/subplans
+    
+    This function processes plans from root (shallowest) to leaf (deepest), starting
+    collaborations for non-leaf plans and reopening their child plans.
+    
     :param plan: Plan dictionary to process
     :param scenario_id: Scenario ID for API calls
     :param all_plans: Dictionary of all plans
@@ -658,7 +703,7 @@ def process_plan_left_to_right(plan: Dict, scenario_id: str, all_plans: Dict[str
         print(f"No UUID found for plan: {plan_name}")
         return False
     
-    print(f"\nProcessing plan (left-to-right): {plan_name} ({plan_uuid})")
+    print(f"\nProcessing plan (root-to-leaf): {plan_name} ({plan_uuid})")
     
     # Find child plans first to determine if this is a leaf plan
     child_plans = get_child_plans(plan_uuid, all_plans)
@@ -743,23 +788,23 @@ def main():
         print("CRITICAL ERROR: No scenario ID found in collaboration.")
         return
     
-    # Build hierarchy ordered from right (deepest) to left (shallowest)
-    print(f"\nBuilding right-to-left hierarchy...")
-    ordered_plans = build_hierarchy_right_to_left(target_plan, all_plans)
+    # Build hierarchy ordered from leaf (deepest) to root (shallowest)
+    print(f"\nBuilding leaf-to-root hierarchy...")
+    ordered_plans = build_hierarchy_leaf_to_root(target_plan, all_plans)
     
     print(f"Found {len(ordered_plans)} plans to process:")
     for i, plan in enumerate(ordered_plans):
         print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
-    # Phase 1: Right-to-left processing (deepest to shallowest)
+    # Phase 1: Leaf-to-root processing (deepest to shallowest)
     print(f"\n{'='*80}")
-    print("PHASE 1: RIGHT-TO-LEFT PROCESSING (DEEPEST TO SHALLOWEST)")
+    print("PHASE 1: LEAF-TO-ROOT PROCESSING (DEEPEST TO SHALLOWEST)")
     print(f"{'='*80}")
     
     successful_plans = []
     for i, plan in enumerate(ordered_plans):
         print(f"\n--- Processing Plan {i+1}/{len(ordered_plans)} ---")
-        if process_plan_right_to_left(plan, scenario_id):
+        if process_plan_leaf_to_root(plan, scenario_id):
             successful_plans.append(plan)
         else:
             print(f"CRITICAL ERROR: Failed to process plan: {plan.get('display_name')}")
@@ -768,22 +813,22 @@ def main():
     
     print(f"\nPhase 1 complete: {len(successful_plans)}/{len(ordered_plans)} plans processed successfully.")
     
-    # Phase 2: Left-to-right processing (shallowest to deepest)
+    # Phase 2: Root-to-leaf processing (shallowest to deepest)
     print(f"\n{'='*80}")
-    print("PHASE 2: LEFT-TO-RIGHT PROCESSING (SHALLOWEST TO DEEPEST)")
+    print("PHASE 2: ROOT-TO-LEAF PROCESSING (SHALLOWEST TO DEEPEST)")
     print(f"{'='*80}")
     
-    # Use the original target tree order (reversed of right-to-left)
+    # Use the original target tree order (reversed of leaf-to-root)
     left_to_right_plans = list(reversed(ordered_plans))
     
-    print(f"Processing {len(left_to_right_plans)} plans in left-to-right order:")
+    print(f"Processing {len(left_to_right_plans)} plans in root-to-leaf order:")
     for i, plan in enumerate(left_to_right_plans):
         print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
     collaboration_success_count = 0
     for i, plan in enumerate(left_to_right_plans):
-        print(f"\n--- Processing Plan {i+1}/{len(left_to_right_plans)} (Left-to-Right) ---")
-        if process_plan_left_to_right(plan, scenario_id, all_plans):
+        print(f"\n--- Processing Plan {i+1}/{len(left_to_right_plans)} (Root-to-Leaf) ---")
+        if process_plan_root_to_leaf(plan, scenario_id, all_plans):
             collaboration_success_count += 1
         else:
             print(f"CRITICAL ERROR: Failed to process collaboration for plan: {plan.get('display_name')}")
@@ -795,8 +840,8 @@ def main():
     print(f"\n{'='*80}")
     print("WORKFLOW COMPLETE!")
     print(f"{'='*80}")
-    print(f"Phase 1 (Right-to-Left): {len(successful_plans)}/{len(ordered_plans)} plans processed")
-    print(f"Phase 2 (Left-to-Right): {collaboration_success_count}/{len(left_to_right_plans)} plans processed")
+    print(f"Phase 1 (Leaf-to-Root): {len(successful_plans)}/{len(ordered_plans)} plans processed")
+    print(f"Phase 2 (Root-to-Leaf): {collaboration_success_count}/{len(left_to_right_plans)} plans processed")
 
 if __name__ == "__main__":
     try:
