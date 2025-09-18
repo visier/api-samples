@@ -55,6 +55,9 @@ if target_plan_name is None:
     raise ValueError("TARGET_PLAN_NAME environment variable must be defined")
 TARGET_PLAN_NAME: str = target_plan_name
 
+# Enable verbose logging for non-error information (default: False)
+VERBOSE = os.getenv('VERBOSE', 'false').lower() in ('true', '1', 'yes', 'on')
+
 config = Configuration.from_env()
 api_client = ApiClient(config)
 data_load_api = DataModelApi()
@@ -85,6 +88,35 @@ def get_start_of_today_timestamp() -> int:
 
 # Cache the start of today timestamp to ensure all plans use the same value
 START_OF_TODAY_MS = get_start_of_today_timestamp()
+
+
+def verbose_print(*args, **kwargs) -> None:
+    """
+    Print messages only when VERBOSE mode is enabled.
+    Always prints error messages regardless of VERBOSE setting.
+    :param args: Arguments to pass to print()
+    :param kwargs: Keyword arguments to pass to print()
+    """
+    if VERBOSE:
+        print(*args, **kwargs)
+
+
+def log_info(*args, **kwargs) -> None:
+    """
+    Log informational messages (only shown in verbose mode).
+    :param args: Arguments to pass to print()
+    :param kwargs: Keyword arguments to pass to print()
+    """
+    verbose_print(*args, **kwargs)
+
+
+def log_error(*args, **kwargs) -> None:
+    """
+    Log error messages (always shown regardless of verbose setting).
+    :param args: Arguments to pass to print()
+    :param kwargs: Keyword arguments to pass to print()
+    """
+    print(*args, **kwargs)
 
 
 def check_plan_operation_response(response, plan_uuid: str, operation_name: str) -> bool:
@@ -126,7 +158,7 @@ def list_plans() -> GetPlanListResponseDTO:
     page = 1
     
     while True:
-        print(f"Fetching plans page {page}...")
+        log_info(f"Fetching plans page {page}...")
         response = data_load_api.plan_data_loadl_list(page=str(page), exclude_subplans=False)
         
         # Check if response has plans and add them to our collection
@@ -157,19 +189,19 @@ def get_schema(plan_uuid: str) -> Optional[PlanWithSchemaDTO]:
     if plan_uuid is None:
         raise ValueError("plan_uuid must be provided.")
     
-    print(f"Fetching plan schema for plan with id: {plan_uuid}")
+    log_info(f"Fetching plan schema for plan with id: {plan_uuid}")
 
     try:
         # Use the dedicated API method
         response = data_load_api.plan_info_with_schema(plan_uuid)
         
-        print("Successfully retrieved plan details and schema!")
-        # Log the retrieved schema
-        print(f"Retrieved plan schema: {json.dumps(response.model_dump() if hasattr(response, 'model_dump') else response, indent=2, default=str)}")
+        log_info("Successfully retrieved plan details and schema!")
+        # Log the retrieved schema in verbose mode only
+        log_info(f"Retrieved plan schema: {json.dumps(response.model_dump() if hasattr(response, 'model_dump') else response, indent=2, default=str)}")
 
         return response
     except Exception as e:
-        print(f"Failed to retrieve plan schema: {str(e)}")
+        log_error(f"Failed to retrieve plan schema: {str(e)}")
         raise
 
 def find_open_or_latest_collaboration(schema: PlanWithSchemaDTO) -> Optional[CollaborationInfo]:
@@ -295,7 +327,7 @@ def submit_plan(plan_uuid: str, scenario_id: str) -> bool:
     :param scenario_id: UUID of the scenario to submit
     :return: True if successful, False otherwise
     """
-    print(f"Submitting plan {plan_uuid} with scenario {scenario_id}")
+    log_info(f"Submitting plan {plan_uuid} with scenario {scenario_id}")
     
     try:
         # Build the payload using the appropriate action classes
@@ -321,17 +353,17 @@ def submit_plan(plan_uuid: str, scenario_id: str) -> bool:
         if not check_plan_operation_response(response, plan_uuid, "submit"):
             return False
         
-        print(f"Successfully submitted plan {plan_uuid}")
+        log_info(f"Successfully submitted plan {plan_uuid}")
         return True
         
     except Exception as e:
         error_message = str(e)
         # Check if this is the specific "plan needs to be open" error (RCIP991031)
         if "RCIP991031" in error_message:
-            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            log_info(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
             return True  # Treat this as success to continue processing
         else:
-            print(f"Failed to submit plan {plan_uuid}: {error_message}")
+            log_error(f"Failed to submit plan {plan_uuid}: {error_message}")
             return False
 
 def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
@@ -433,7 +465,7 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
     :param scenario_id: UUID of the scenario to start collaboration for
     :return: True if successful, False otherwise
     """
-    print(f"Starting collaboration for plan {plan_uuid} with scenario {scenario_id}")
+    log_info(f"Starting collaboration for plan {plan_uuid} with scenario {scenario_id}")
     
     try:
         # Build the payload using the appropriate action classes
@@ -460,17 +492,17 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
         if not check_plan_operation_response(response, plan_uuid, "start collaboration for"):
             return False
         
-        print(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        log_info(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
         return True
         
     except Exception as e:
         error_message = str(e)
         # Check if this is the specific "plan needs to be open" error (RCIP991031)
         if "RCIP991031" in error_message:
-            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            log_info(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
             return True  # Treat this as success to continue processing
         else:
-            print(f"Failed to start collaboration for plan {plan_uuid}: {error_message}")
+            log_error(f"Failed to start collaboration for plan {plan_uuid}: {error_message}")
             return False
 
 def reopen_plan(plan_uuid: str, scenario_id: str) -> bool:
@@ -626,16 +658,16 @@ def process_plan_leaf_to_root(plan: Dict, scenario_id: str) -> bool:
     is_root_plan = not parent_plan_uuid
     
     if not plan_uuid:
-        print(f"No UUID found for plan: {plan_name}")
+        log_error(f"No UUID found for plan: {plan_name}")
         return False
     
-    print(f"\nProcessing plan: {plan_name} ({plan_uuid})" + (" [ROOT PLAN]" if is_root_plan else ""))
+    log_info(f"\nProcessing plan: {plan_name} ({plan_uuid})" + (" [ROOT PLAN]" if is_root_plan else ""))
     
     # Get schema to check for open collaboration
     try:
         plan_schema = get_schema(plan_uuid)
         if not plan_schema:
-            print(f"Failed to retrieve schema for plan: {plan_name}")
+            log_error(f"Failed to retrieve schema for plan: {plan_name}")
             return False
         
         # Check if there's an open collaboration
@@ -700,21 +732,21 @@ def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str,
     plan_name = plan.get('display_name', 'Unnamed Plan')
     
     if not plan_uuid:
-        print(f"No UUID found for plan: {plan_name}")
+        log_error(f"No UUID found for plan: {plan_name}")
         return False
     
-    print(f"\nProcessing plan (root-to-leaf): {plan_name} ({plan_uuid})")
+    log_info(f"\nProcessing plan (root-to-leaf): {plan_name} ({plan_uuid})")
     
     # Find child plans first to determine if this is a leaf plan
     child_plans = get_child_plans(plan_uuid, all_plans)
     
     if not child_plans:
-        print(f"Plan {plan_name} is a leaf plan (no children) - skipping collaboration start")
+        log_info(f"Plan {plan_name} is a leaf plan (no children) - skipping collaboration start")
         return True
     
     # Step 1: Start collaboration (only for non-leaf plans)
     if not start_collaboration(plan_uuid, scenario_id):
-        print(f"Failed to start collaboration for plan: {plan_name}")
+        log_error(f"Failed to start collaboration for plan: {plan_name}")
         return False
     
     # Step 2: Reopen all child plans
@@ -738,45 +770,47 @@ def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str,
 
 def main():
     print("Starting plans retrieval...")
+    print(f"Verbose logging: {'ENABLED' if VERBOSE else 'DISABLED'}")
     print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} ({START_OF_TODAY_MS}ms)")
     
     plans = list_plans()
     if not plans:
-        print("CRITICAL ERROR: No plans found.")
+        log_error("CRITICAL ERROR: No plans found.")
         return
     
     # Build and display the plan tree
-    print("Building plan tree...")
+    log_info("Building plan tree...")
     plans_tree, all_plans = build_plan_tree(plans)
     
-    print("\nPlan Tree Structure:")
-    print_plan_tree(plans_tree)
+    log_info("\nPlan Tree Structure:")
+    if VERBOSE:
+        print_plan_tree(plans_tree)
     
     # Find the target plan
     print(f"\nLooking for plan: '{TARGET_PLAN_NAME}'")
     target_plan = find_target_plan(plans_tree, TARGET_PLAN_NAME)
     
     if not target_plan:
-        print(f"CRITICAL ERROR: Plan '{TARGET_PLAN_NAME}' not found.")
+        log_error(f"CRITICAL ERROR: Plan '{TARGET_PLAN_NAME}' not found.")
         return
     
     print(f"Found target plan: {target_plan.get('display_name')} ({target_plan.get('uuid')})")
     root_plan_uuid = target_plan.get('uuid')
     
     if not root_plan_uuid:
-        print("CRITICAL ERROR: Root plan UUID not found.")
+        log_error("CRITICAL ERROR: Root plan UUID not found.")
         return
     
     # Get collaboration info for the target plan
     plan_schema = get_schema(root_plan_uuid)
     if not plan_schema:
-        print("CRITICAL ERROR: Failed to retrieve plan collaboration info.")
+        log_error("CRITICAL ERROR: Failed to retrieve plan collaboration info.")
         return
     
     # Find collaboration info
     collaboration = find_open_or_latest_collaboration(plan_schema)
     if not collaboration:
-        print("CRITICAL ERROR: No collaboration found for this plan.")
+        log_error("CRITICAL ERROR: No collaboration found for this plan.")
         return
         
     print("Found collaboration:")
@@ -785,16 +819,17 @@ def main():
     scenario_id = collaboration.scenario_id
     
     if not scenario_id:
-        print("CRITICAL ERROR: No scenario ID found in collaboration.")
+        log_error("CRITICAL ERROR: No scenario ID found in collaboration.")
         return
     
     # Build hierarchy ordered from leaf (deepest) to root (shallowest)
-    print(f"\nBuilding leaf-to-root hierarchy...")
+    log_info(f"\nBuilding leaf-to-root hierarchy...")
     ordered_plans = build_hierarchy_leaf_to_root(target_plan, all_plans)
     
     print(f"Found {len(ordered_plans)} plans to process:")
-    for i, plan in enumerate(ordered_plans):
-        print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
+    if VERBOSE:
+        for i, plan in enumerate(ordered_plans):
+            print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
     # Phase 1: Leaf-to-root processing (deepest to shallowest)
     print(f"\n{'='*80}")
@@ -803,12 +838,12 @@ def main():
     
     successful_plans = []
     for i, plan in enumerate(ordered_plans):
-        print(f"\n--- Processing Plan {i+1}/{len(ordered_plans)} ---")
+        log_info(f"\n--- Processing Plan {i+1}/{len(ordered_plans)} ---")
         if process_plan_leaf_to_root(plan, scenario_id):
             successful_plans.append(plan)
         else:
-            print(f"CRITICAL ERROR: Failed to process plan: {plan.get('display_name')}")
-            print("Operation terminated due to error.")
+            log_error(f"CRITICAL ERROR: Failed to process plan: {plan.get('display_name')}")
+            log_error("Operation terminated due to error.")
             return
     
     print(f"\nPhase 1 complete: {len(successful_plans)}/{len(ordered_plans)} plans processed successfully.")
