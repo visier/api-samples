@@ -206,7 +206,8 @@ def get_schema(plan_uuid: str) -> Optional[PlanWithSchemaDTO]:
 
 def find_open_or_latest_collaboration(schema: PlanWithSchemaDTO) -> Optional[CollaborationInfo]:
     """
-    Finds the open or latest collaboration in the given plan schema.
+    Returns the info for the latest collaboration, which can be open or closed,
+    with given plan schema.
     :param schema: The plan schema to search within.
     :return: The open or latest collaboration, if found.
     """
