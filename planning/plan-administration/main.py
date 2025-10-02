@@ -825,11 +825,11 @@ def main():
     
     # Build hierarchy ordered from leaf (deepest) to root (shallowest)
     log_info(f"\nBuilding leaf-to-root hierarchy...")
-    ordered_plans = build_hierarchy_leaf_to_root(target_plan, all_plans)
+    leaf_to_root_plans = build_hierarchy_leaf_to_root(target_plan, all_plans)
     
-    print(f"Found {len(ordered_plans)} plans to process:")
+    print(f"Found {len(leaf_to_root_plans)} plans to process:")
     if VERBOSE:
-        for i, plan in enumerate(ordered_plans):
+        for i, plan in enumerate(leaf_to_root_plans):
             print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
     # Phase 1: Leaf-to-root processing (deepest to shallowest)
@@ -838,8 +838,8 @@ def main():
     print(f"{'='*80}")
     
     successful_plans = []
-    for i, plan in enumerate(ordered_plans):
-        log_info(f"\n--- Processing Plan {i+1}/{len(ordered_plans)} ---")
+    for i, plan in enumerate(leaf_to_root_plans):
+        log_info(f"\n--- Processing Plan {i+1}/{len(leaf_to_root_plans)} ---")
         if process_plan_leaf_to_root(plan, scenario_id):
             successful_plans.append(plan)
         else:
@@ -847,7 +847,7 @@ def main():
             log_error("Operation terminated due to error.")
             return
     
-    print(f"\nPhase 1 complete: {len(successful_plans)}/{len(ordered_plans)} plans processed successfully.")
+    print(f"\nPhase 1 complete: {len(successful_plans)}/{len(leaf_to_root_plans)} plans processed successfully.")
     
     # Phase 2: Root-to-leaf processing (shallowest to deepest)
     print(f"\n{'='*80}")
@@ -855,15 +855,15 @@ def main():
     print(f"{'='*80}")
     
     # Use the original target tree order (reversed of leaf-to-root)
-    left_to_right_plans = list(reversed(ordered_plans))
+    root_to_leaf_plans = list(reversed(leaf_to_root_plans))
     
-    print(f"Processing {len(left_to_right_plans)} plans in root-to-leaf order:")
-    for i, plan in enumerate(left_to_right_plans):
+    print(f"Processing {len(root_to_leaf_plans)} plans in root-to-leaf order:")
+    for i, plan in enumerate(root_to_leaf_plans):
         print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
     collaboration_success_count = 0
-    for i, plan in enumerate(left_to_right_plans):
-        print(f"\n--- Processing Plan {i+1}/{len(left_to_right_plans)} (Root-to-Leaf) ---")
+    for i, plan in enumerate(root_to_leaf_plans):
+        print(f"\n--- Processing Plan {i+1}/{len(root_to_leaf_plans)} (Root-to-Leaf) ---")
         if process_plan_root_to_leaf(plan, scenario_id, all_plans):
             collaboration_success_count += 1
         else:
@@ -871,13 +871,13 @@ def main():
             print("Operation terminated due to error.")
             return
     
-    print(f"\nPhase 2 complete: {collaboration_success_count}/{len(left_to_right_plans)} plans processed successfully.")
+    print(f"\nPhase 2 complete: {collaboration_success_count}/{len(root_to_leaf_plans)} plans processed successfully.")
     
     print(f"\n{'='*80}")
     print("WORKFLOW COMPLETE!")
     print(f"{'='*80}")
-    print(f"Phase 1 (Leaf-to-Root): {len(successful_plans)}/{len(ordered_plans)} plans processed")
-    print(f"Phase 2 (Root-to-Leaf): {collaboration_success_count}/{len(left_to_right_plans)} plans processed")
+    print(f"Phase 1 (Leaf-to-Root): {len(successful_plans)}/{len(leaf_to_root_plans)} plans processed")
+    print(f"Phase 2 (Root-to-Leaf): {collaboration_success_count}/{len(root_to_leaf_plans)} plans processed")
 
 if __name__ == "__main__":
     try:
