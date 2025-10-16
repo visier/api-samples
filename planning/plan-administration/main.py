@@ -1,23 +1,19 @@
+import json
+import os
+from datetime import datetime
 from typing import Dict, List, Optional, Set
 
-import pandas as pd
-import os
 from dotenv import load_dotenv
-from pandas import DataFrame
-import json
-from datetime import datetime, timezone, timedelta
 
 from visier_platform_sdk import (
-    ApiClient, Configuration, PlanAdministrationApi, DataModelApi, GetPlanListResponseDTO,
-    CollaborationInfo, PlanWithSchemaDTO
+    ApiClient,
+    CollaborationInfo,
+    Configuration,
+    DataModelApi,
+    GetPlanListResponseDTO,
+    PlanAdministrationApi,
+    PlanWithSchemaDTO,
 )
-
-# Define CollaborationStatus enum locally since it might not be in the SDK
-from enum import Enum
-
-class CollaborationStatus(Enum):
-    Closed = "Closed"
-    Open = "Open"
 
 load_dotenv()
 
@@ -66,25 +62,17 @@ plan_admin_api = PlanAdministrationApi(api_client)
 # Calculate start of today once to ensure consistency across all plans
 def get_start_of_today_timestamp() -> int:
     """
-    Get the start of today in UTC time as a Unix timestamp in milliseconds.
-    If UTC now is the next day compared to local time, move it back one day,
-    then set to the start of that UTC day (00:00:00 UTC).
-    :return: Unix timestamp in milliseconds for start of day (00:00:00 UTC)
+    Get the start of today in local time as a Unix timestamp in milliseconds.
+    :return: Unix timestamp in milliseconds for start of local day (00:00:00 local time)
     """
-    utc_now = datetime.now(timezone.utc)
+    # Get current local time
     local_now = datetime.now()
     
-    # Check if UTC date is next day compared to local date
-    if utc_now.date() > local_now.date():
-        # Move UTC back one day
-        utc_target_date = utc_now.date() - timedelta(days=1)
-    else:
-        # Use current UTC date
-        utc_target_date = utc_now.date()
+    # Create start of day in local time (00:00:00 local)
+    start_of_day_local = datetime.combine(local_now.date(), datetime.min.time())
     
-    # Create start of day in UTC (00:00:00 UTC)
-    start_of_day_utc = datetime.combine(utc_target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    return int(start_of_day_utc.timestamp() * 1000)
+    # Convert to timestamp in milliseconds
+    return int(start_of_day_local.timestamp() * 1000)
 
 # Cache the start of today timestamp to ensure all plans use the same value
 START_OF_TODAY_MS = get_start_of_today_timestamp()
@@ -217,9 +205,9 @@ def find_open_or_latest_collaboration(schema: PlanWithSchemaDTO) -> Optional[Col
         return None
 
     # Find the open collaboration or the latest one
-    # Check for both enum and string values since the API returns strings
+    # Check for string values since the API returns strings
     open_collab = next((c for c in plan.collaborations 
-                       if (c.status == CollaborationStatus.Open.value)), None)
+                       if (c.status == "Open")), None)
     if open_collab:
         return open_collab
 
@@ -493,7 +481,7 @@ def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
         if not check_plan_operation_response(response, plan_uuid, "start collaboration for"):
             return False
         
-        log_info(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        log_info(f"Successfully started collaboration for plan {plan_uuid} with start date: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S local time')}")
         return True
         
     except Exception as e:
@@ -572,7 +560,7 @@ def find_parent_plans(leaf_plans: List[Dict], all_plans: Dict[str, Dict]) -> Lis
 
 def build_hierarchy_leaf_to_root(target_plan: Dict, all_plans: Dict[str, Dict]) -> List[Dict]:
     """
-    Builds a hierarchy where no node is a parent of any node to its left.
+    Builds a hierarchy ordered from leaf (deepest) to root (shallowest).
     Returns plans ordered from leaf (deepest) to root (shallowest).
     :param target_plan: The root plan to analyze
     :param all_plans: Dictionary of all plans indexed by UUID
@@ -673,7 +661,7 @@ def process_plan_leaf_to_root(plan: Dict, scenario_id: str) -> bool:
         
         # Check if there's an open collaboration
         collaboration = find_open_or_latest_collaboration(plan_schema)
-        has_open_collaboration = collaboration is not None and collaboration.status == CollaborationStatus.Open.value
+        has_open_collaboration = collaboration is not None and collaboration.status == "Open"
         
         if has_open_collaboration:
             print(f"Plan {plan_name} has open collaboration - consolidating first")
@@ -772,7 +760,7 @@ def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str,
 def main():
     print("Starting plans retrieval...")
     print(f"Verbose logging: {'ENABLED' if VERBOSE else 'DISABLED'}")
-    print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')} ({START_OF_TODAY_MS}ms)")
+    print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S local time')} ({START_OF_TODAY_MS}ms)")
     
     plans = list_plans()
     if not plans:
