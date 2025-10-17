@@ -32,13 +32,13 @@ Leaf Plans:
 - These are the most granular plans where actual work/data entry happens
 - Identified by having an empty subplans list or no subplans
 - Leaf plans are typically submitted as part of the workflow
-- Example: "Q1 Sales Team Budget - Location 1" might be a leaf plan under a quarterly root plan
+- Example: "Q1 Sales Team Budget - Location 1 - Product 1" might be a leaf plan under a quarterly root plan
 
 Intermediate Plans:
 - Plans that are both a main and a subplan
 - Plans that have both a parent (not root) and children (not leaf)
 - These serve as organizational containers between root and leaf levels
-- Example: "Q1 Budget" under "Annual Budget 2024" with team-specific subplans
+- Example: "Q1 Sales Team Budget - Location 1" under "Q1 Sales Team Budget" with team-specific subplans
 
 Processing Order:
 - Leaf-to-Root (Leaf-to-Root): Process deepest plans first, moving toward root
@@ -78,8 +78,15 @@ def get_start_of_today_timestamp() -> int:
 # Cache the start of today timestamp to ensure all plans use the same value
 START_OF_TODAY_MS = get_start_of_today_timestamp()
 
+def log_always(*args, **kwargs) -> None:
+    """
+    Print messages always.
+    :param args: Arguments to pass to print()
+    :param kwargs: Keyword arguments to pass to print()
+    """
+    print(*args, **kwargs)
 
-def verbose_print(*args, **kwargs) -> None:
+def log_info(*args, **kwargs) -> None:
     """
     Print messages only when VERBOSE mode is enabled.
     Always prints error messages regardless of VERBOSE setting.
@@ -88,15 +95,6 @@ def verbose_print(*args, **kwargs) -> None:
     """
     if VERBOSE:
         print(*args, **kwargs)
-
-
-def log_info(*args, **kwargs) -> None:
-    """
-    Log informational messages (only shown in verbose mode).
-    :param args: Arguments to pass to print()
-    :param kwargs: Keyword arguments to pass to print()
-    """
-    verbose_print(*args, **kwargs)
 
 
 def log_error(*args, **kwargs) -> None:
@@ -124,10 +122,10 @@ def check_plan_operation_response(response, plan_uuid: str, operation_name: str)
                 if hasattr(action_result, 'error') and action_result.error:
                     error_rci = action_result.error.rci if action_result.error.rci else ''
                     error_message = action_result.error.message if action_result.error.message else 'Unknown error'
-                    print(f"Failed to {operation_name} plan {plan_uuid}: {error_message} (rci: {error_rci})")
+                    log_error(f"Failed to {operation_name} plan {plan_uuid}: {error_message} (rci: {error_rci})")
                     return False
                 else:
-                    print(f"Failed to {operation_name} plan {plan_uuid}: Action result indicates failure")
+                    log_error(f"Failed to {operation_name} plan {plan_uuid}: Action result indicates failure")
                     return False
     
     # If we get here, the operation was successful
@@ -359,7 +357,7 @@ def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
     :param scenario_id: UUID of the scenario to consolidate
     :return: True if successful, False otherwise
     """
-    print(f"Consolidating plan {plan_uuid} with scenario {scenario_id}")
+    log_info(f"Consolidating plan {plan_uuid} with scenario {scenario_id}")
     
     try:
         # Build the payload using the appropriate action classes
@@ -385,17 +383,18 @@ def consolidate_plan(plan_uuid: str, scenario_id: str) -> bool:
         if not check_plan_operation_response(response, plan_uuid, "consolidate"):
             return False
         
-        print(f"Successfully consolidated plan {plan_uuid}")
+        log_info(f"Successfully consolidated plan {plan_uuid}")
         return True
         
     except Exception as e:
         error_message = str(e)
         # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        # It is normal for a plan to not in collaboration mode, which consolidate is also not needed in this case.
         if "RCIP991031" in error_message:
-            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            log_error(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
             return True  # Treat this as success to continue processing
         else:
-            print(f"Failed to consolidate plan {plan_uuid}: {error_message}")
+            log_error(f"Failed to consolidate plan {plan_uuid}: {error_message}")
             return False
 
 def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
@@ -405,7 +404,7 @@ def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
     :param scenario_id: UUID of the scenario to close collaboration for
     :return: True if successful, False otherwise
     """
-    print(f"Closing collaboration for plan {plan_uuid} with scenario {scenario_id}")
+    log_info(f"Closing collaboration for plan {plan_uuid} with scenario {scenario_id}")
     
     try:
         # Build the payload using the appropriate action classes
@@ -431,17 +430,17 @@ def close_collaboration(plan_uuid: str, scenario_id: str) -> bool:
         if not check_plan_operation_response(response, plan_uuid, "close collaboration for"):
             return False
         
-        print(f"Successfully closed collaboration for plan {plan_uuid}")
+        log_info(f"Successfully closed collaboration for plan {plan_uuid}")
         return True
         
     except Exception as e:
         error_message = str(e)
         # Check if this is the specific "plan needs to be open" error (RCIP991031)
         if "RCIP991031" in error_message:
-            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            log_error(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
             return True  # Treat this as success to continue processing
         else:
-            print(f"Failed to close collaboration for plan {plan_uuid}: {error_message}")
+            log_error(f"Failed to close collaboration for plan {plan_uuid}: {error_message}")
             return False
 
 def start_collaboration(plan_uuid: str, scenario_id: str) -> bool:
@@ -498,7 +497,7 @@ def reopen_plan(plan_uuid: str, scenario_id: str) -> bool:
     :param scenario_id: UUID of the scenario to reopen
     :return: True if successful, False otherwise
     """
-    print(f"Reopening plan {plan_uuid} with scenario {scenario_id}")
+    log_info(f"Reopening plan {plan_uuid} with scenario {scenario_id}")
     
     try:
         # Build the payload using the appropriate action classes
@@ -524,17 +523,18 @@ def reopen_plan(plan_uuid: str, scenario_id: str) -> bool:
         if not check_plan_operation_response(response, plan_uuid, "reopen"):
             return False
         
-        print(f"Successfully reopened plan {plan_uuid}")
+        log_info(f"Successfully reopened plan {plan_uuid}")
         return True
         
     except Exception as e:
         error_message = str(e)
         # Check if this is the specific "plan needs to be open" error (RCIP991031)
+        # It is normal for a plan to be opened already, which reopen is also not needed in this case.
         if "RCIP991031" in error_message:
-            print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
+            log_info(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
             return True  # Treat this as success to continue processing
         else:
-            print(f"Failed to reopen plan {plan_uuid}: {error_message}")
+            log_error(f"Failed to reopen plan {plan_uuid}: {error_message}")
             return False
 
 def find_parent_plans(leaf_plans: List[Dict], all_plans: Dict[str, Dict]) -> List[Dict]:
@@ -661,41 +661,41 @@ def process_plan_leaf_to_root(plan: Dict, scenario_id: str) -> bool:
         has_open_collaboration = collaboration is not None and collaboration.status == "Open"
         
         if has_open_collaboration:
-            print(f"Plan {plan_name} has open collaboration - consolidating first")
+            log_info(f"Plan {plan_name} has open collaboration - consolidating first")
             
             # Step 1: Consolidate
             if not consolidate_plan(plan_uuid, scenario_id):
-                print(f"Failed to consolidate plan: {plan_name}")
+                log_error(f"Failed to consolidate plan: {plan_name}")
                 return False
             
             # Step 2: Close collaboration
             if not close_collaboration(plan_uuid, scenario_id):
-                print(f"Failed to close collaboration for plan: {plan_name}")
+                log_error(f"Failed to close collaboration for plan: {plan_name}")
                 return False
             
             # Step 3: Submit (skip for root plans)
             if is_root_plan:
-                print(f"Skipping submit for root plan: {plan_name} - root plans should not be submitted")
+                log_info(f"Skipping submit for root plan: {plan_name} - root plans should not be submitted")
             else:
                 if not submit_plan(plan_uuid, scenario_id):
-                    print(f"Failed to submit plan: {plan_name}")
+                    log_error(f"Failed to submit plan: {plan_name}")
                     return False
         else:
-            print(f"Plan {plan_name} has no open collaboration")
+            log_info(f"Plan {plan_name} has no open collaboration")
             
             # Submit directly (skip for root plans)
             if is_root_plan:
-                print(f"Skipping submit for root plan: {plan_name} - root plans should not be submitted")
+                log_info(f"Skipping submit for root plan: {plan_name} - root plans should not be submitted")
             else:
-                print(f"Submitting plan directly")
+                log_info(f"Submitting plan directly")
                 if not submit_plan(plan_uuid, scenario_id):
-                    print(f"Failed to submit plan: {plan_name}")
+                    log_error(f"Failed to submit plan: {plan_name}")
                     return False
         
         return True
         
     except Exception as e:
-        print(f"Error processing plan {plan_name}: {str(e)}")
+        log_error(f"Error processing plan {plan_name}: {str(e)}")
         return False
 
 def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str, Dict]) -> bool:
@@ -736,7 +736,7 @@ def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str,
         return False
     
     # Step 2: Reopen all child plans
-    print(f"Found {len(child_plans)} child plans to reopen:")
+    log_info(f"Found {len(child_plans)} child plans to reopen:")
     reopen_success_count = 0
     
     for child_plan in child_plans:
@@ -744,20 +744,20 @@ def process_plan_root_to_leaf(plan: Dict, scenario_id: str, all_plans: Dict[str,
         child_name = child_plan.get('display_name', 'Unnamed Child Plan')
         
         if child_uuid:
-            print(f"  Reopening: {child_name} ({child_uuid})")
+            log_info(f"  Reopening: {child_name} ({child_uuid})")
             if reopen_plan(child_uuid, scenario_id):
                 reopen_success_count += 1
             else:
-                print(f"  Failed to reopen: {child_name}")
+                log_error(f"  Failed to reopen: {child_name}")
     
-    print(f"Reopened {reopen_success_count}/{len(child_plans)} child plans successfully.")
+    log_info(f"Reopened {reopen_success_count}/{len(child_plans)} child plans successfully.")
     
     return True
 
 def main():
-    print("Starting plans retrieval...")
-    print(f"Verbose logging: {'ENABLED' if VERBOSE else 'DISABLED'}")
-    print(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S local time')} ({START_OF_TODAY_MS}ms)")
+    log_always("Starting plans retrieval...")
+    log_always(f"Verbose logging: {'ENABLED' if VERBOSE else 'DISABLED'}")
+    log_always(f"Using start of today timestamp for collaborations: {datetime.fromtimestamp(START_OF_TODAY_MS/1000).strftime('%Y-%m-%d %H:%M:%S local time')} ({START_OF_TODAY_MS}ms)")
     
     plans = list_plans()
     if not plans:
@@ -765,22 +765,24 @@ def main():
         return
     
     # Build and display the plan tree
-    log_info("Building plan tree...")
+    log_always("Building plan tree...")
     plans_tree, all_plans = build_plan_tree(plans)
     
-    log_info("\nPlan Tree Structure:")
+    log_always("\nPlan Tree Structure:")
     if VERBOSE:
         print_plan_tree(plans_tree)
+    else:
+        log_always("Plan tree structure not displayed due to verbose mode being disabled.")
     
     # Find the target plan
-    print(f"\nLooking for plan: '{TARGET_PLAN_NAME}'")
+    log_always(f"\nLooking for plan: '{TARGET_PLAN_NAME}'")
     target_plan = find_target_plan(plans_tree, TARGET_PLAN_NAME)
     
     if not target_plan:
         log_error(f"CRITICAL ERROR: Plan '{TARGET_PLAN_NAME}' not found.")
         return
     
-    print(f"Found target plan: {target_plan.get('display_name')} ({target_plan.get('uuid')})")
+    log_always(f"Found target plan: {target_plan.get('display_name')} ({target_plan.get('uuid')})")
     root_plan_uuid = target_plan.get('uuid')
     
     if not root_plan_uuid:
@@ -799,9 +801,9 @@ def main():
         log_error("CRITICAL ERROR: No collaboration found for this plan.")
         return
         
-    print("Found collaboration:")
-    print(f"  Scenario ID: {collaboration.scenario_id}")
-    print(f"  Status: {collaboration.status}")
+    log_always("Found collaboration:")
+    log_always(f"  Scenario ID: {collaboration.scenario_id}")
+    log_always(f"  Status: {collaboration.status}")
     scenario_id = collaboration.scenario_id
     
     if not scenario_id:
@@ -812,15 +814,15 @@ def main():
     log_info(f"\nBuilding leaf-to-root hierarchy...")
     leaf_to_root_plans = build_hierarchy_leaf_to_root(target_plan, all_plans)
     
-    print(f"Found {len(leaf_to_root_plans)} plans to process:")
+    log_always(f"Found {len(leaf_to_root_plans)} plans to process:")
     if VERBOSE:
         for i, plan in enumerate(leaf_to_root_plans):
-            print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
+            log_always(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
     # Phase 1: Leaf-to-root processing (deepest to shallowest)
-    print(f"\n{'='*80}")
-    print("PHASE 1: LEAF-TO-ROOT PROCESSING (DEEPEST TO SHALLOWEST)")
-    print(f"{'='*80}")
+    log_always(f"\n{'='*80}")
+    log_always("PHASE 1: LEAF-TO-ROOT PROCESSING (DEEPEST TO SHALLOWEST)")
+    log_always(f"{'='*80}")
     
     successful_plans = []
     for i, plan in enumerate(leaf_to_root_plans):
@@ -832,44 +834,44 @@ def main():
             log_error("Operation terminated due to error.")
             return
     
-    print(f"\nPhase 1 complete: {len(successful_plans)}/{len(leaf_to_root_plans)} plans processed successfully.")
+    log_always(f"\nPhase 1 complete: {len(successful_plans)}/{len(leaf_to_root_plans)} plans processed successfully.")
     
     # Phase 2: Root-to-leaf processing (shallowest to deepest)
-    print(f"\n{'='*80}")
-    print("PHASE 2: ROOT-TO-LEAF PROCESSING (SHALLOWEST TO DEEPEST)")
-    print(f"{'='*80}")
+    log_always(f"\n{'='*80}")
+    log_always("PHASE 2: ROOT-TO-LEAF PROCESSING (SHALLOWEST TO DEEPEST)")
+    log_always(f"{'='*80}")
     
     # Use the original target tree order (reversed of leaf-to-root)
     root_to_leaf_plans = list(reversed(leaf_to_root_plans))
     
-    print(f"Processing {len(root_to_leaf_plans)} plans in root-to-leaf order:")
+    log_always(f"Processing {len(root_to_leaf_plans)} plans in root-to-leaf order:")
     for i, plan in enumerate(root_to_leaf_plans):
-        print(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
+        log_always(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
     
     collaboration_success_count = 0
     for i, plan in enumerate(root_to_leaf_plans):
-        print(f"\n--- Processing Plan {i+1}/{len(root_to_leaf_plans)} (Root-to-Leaf) ---")
+        log_always(f"\n--- Processing Plan {i+1}/{len(root_to_leaf_plans)} (Root-to-Leaf) ---")
         if process_plan_root_to_leaf(plan, scenario_id, all_plans):
             collaboration_success_count += 1
         else:
-            print(f"CRITICAL ERROR: Failed to process collaboration for plan: {plan.get('display_name')}")
-            print("Operation terminated due to error.")
+            log_error(f"CRITICAL ERROR: Failed to process collaboration for plan: {plan.get('display_name')}")
+            log_error("Operation terminated due to error.")
             return
     
-    print(f"\nPhase 2 complete: {collaboration_success_count}/{len(root_to_leaf_plans)} plans processed successfully.")
+    log_always(f"\nPhase 2 complete: {collaboration_success_count}/{len(root_to_leaf_plans)} plans processed successfully.")
     
-    print(f"\n{'='*80}")
-    print("WORKFLOW COMPLETE!")
-    print(f"{'='*80}")
-    print(f"Phase 1 (Leaf-to-Root): {len(successful_plans)}/{len(leaf_to_root_plans)} plans processed")
-    print(f"Phase 2 (Root-to-Leaf): {collaboration_success_count}/{len(root_to_leaf_plans)} plans processed")
+    log_always(f"\n{'='*80}")
+    log_always("WORKFLOW COMPLETE!")
+    log_always(f"{'='*80}")
+    log_always(f"Phase 1 (Leaf-to-Root): {len(successful_plans)}/{len(leaf_to_root_plans)} plans processed")
+    log_always(f"Phase 2 (Root-to-Leaf): {collaboration_success_count}/{len(root_to_leaf_plans)} plans processed")
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"\nCRITICAL ERROR: Unexpected error occurred: {str(e)}")
-        print("Operation terminated due to unexpected error.")
+        log_error(f"\nCRITICAL ERROR: Unexpected error occurred: {str(e)}")
+        log_error("Operation terminated due to unexpected error.")
         import traceback
         traceback.print_exc()
         exit(1)
