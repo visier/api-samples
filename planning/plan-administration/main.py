@@ -272,16 +272,29 @@ def print_plan_tree(plans_tree: List[Dict], indent: int = 0) -> None:
 
 def find_target_plan(plans_tree: List[Dict], target_name: str) -> Optional[Dict]:
     """
-    Finds the first root plan that matches the target name.
+    Finds the root plan that matches the target name.
+    Terminates with error if multiple matching plans are found.
     :param plans_tree: List of root plans with nested subplans
     :param target_name: Name of the plan to find
     :return: The matching plan dictionary or None if not found
     """
+    matching_plans = []
     for plan in plans_tree:
         display_name = plan.get('display_name', '')
         if display_name == target_name:
-            return plan
-    return None
+            matching_plans.append(plan)
+    
+    if len(matching_plans) == 0:
+        return None
+    elif len(matching_plans) == 1:
+        return matching_plans[0]
+    else:
+        # Multiple matching plans found - terminate with error
+        log_error(f"CRITICAL ERROR: Multiple root plans found with name '{target_name}':")
+        for i, plan in enumerate(matching_plans):
+            log_error(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
+        log_error("Please ensure plan names are unique or contact Visier Support to resolve this issue.")
+        raise ValueError(f"Multiple root plans found with name '{target_name}'. Found {len(matching_plans)} matching plans.")
 
 def find_leaf_plans(plan_tree: Dict) -> List[Dict]:
     """
