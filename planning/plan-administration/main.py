@@ -265,7 +265,7 @@ def print_plan_tree(plans_tree: List[Dict], indent: int = 0) -> None:
         prefix = "  " * indent + ("└─ " if indent > 0 else "")
         display_name = plan.get('display_name', 'Unnamed Plan')
         uuid = plan.get('uuid', 'No UUID')
-        print(f"{prefix}{display_name} ({uuid})")
+        log_info(f"{prefix}{display_name} ({uuid})")
         
         if plan.get('subplans'):
             print_plan_tree(plan['subplans'], indent + 1)
