@@ -25,7 +25,7 @@ Configure the `.env` file with the following environment variables:
 ### Authentication
 This script authenticates using the [Visier Python SDKs](https://github.com/visier/python-sdk). For more authentication options, see [API Authentication](https://docs.visier.com/visier-people/Default.htm#cshid=1054).
 ```env
-VISIER_HOST=https://customer-specific.ai.visier.io
+VISIER_HOST=https://customer-specific.api.visier.io
 VISIER_API=visier-provided-api-key
 VISIER_USERNAME=visier-username
 VISIER_PASSWORD=visier-password
