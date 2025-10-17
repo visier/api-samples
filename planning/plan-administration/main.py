@@ -568,7 +568,7 @@ def build_hierarchy_leaf_to_root(target_plan: Dict, all_plans: Dict[str, Dict]) 
         if visited is None:
             visited = set()
         if plan_uuid in visited:
-            return 0  # Avoid cycles
+            raise ValueError(f"Cycle detected for plan {plan_uuid}. Please contact Visier Support to resolve this issue.")
         visited.add(plan_uuid)
         
         if plan_uuid == root_uuid:
