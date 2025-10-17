@@ -32,9 +32,10 @@ Leaf Plans:
 - These are the most granular plans where actual work/data entry happens
 - Identified by having an empty subplans list or no subplans
 - Leaf plans are typically submitted as part of the workflow
-- Example: "Q1 Sales Team Budget" might be a leaf plan under a quarterly root plan
+- Example: "Q1 Sales Team Budget - Location 1" might be a leaf plan under a quarterly root plan
 
 Intermediate Plans:
+- Plans that are both a main and a subplan
 - Plans that have both a parent (not root) and children (not leaf)
 - These serve as organizational containers between root and leaf levels
 - Example: "Q1 Budget" under "Annual Budget 2024" with team-specific subplans
@@ -113,7 +114,7 @@ def check_plan_operation_response(response, plan_uuid: str, operation_name: str)
     :param response: The response from the plan operation API call
     :param plan_uuid: UUID of the plan being operated on
     :param operation_name: Name of the operation (for error messages)
-    :return: True if successful or RCIP991031 error (continue processing), False for other errors
+    :return: True if successful, False for other errors
     """
     # Check response for errors in actionResults
     if hasattr(response, 'action_results') and response.action_results:
@@ -123,12 +124,8 @@ def check_plan_operation_response(response, plan_uuid: str, operation_name: str)
                 if hasattr(action_result, 'error') and action_result.error:
                     error_rci = action_result.error.rci if action_result.error.rci else ''
                     error_message = action_result.error.message if action_result.error.message else 'Unknown error'
-                    if error_rci == 'RCIP991031':
-                        print(f"Plan {plan_uuid} is not in the expected state (plan needs to be open) - continuing operation")
-                        return True
-                    else:
-                        print(f"Failed to {operation_name} plan {plan_uuid}: {error_message} (rci: {error_rci})")
-                        return False
+                    print(f"Failed to {operation_name} plan {plan_uuid}: {error_message} (rci: {error_rci})")
+                    return False
                 else:
                     print(f"Failed to {operation_name} plan {plan_uuid}: Action result indicates failure")
                     return False
