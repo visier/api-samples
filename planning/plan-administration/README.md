@@ -34,11 +34,11 @@ VISIER_VANITY=visier-tenant-vanity-name
 
 ### Script Configuration
 ```env
-TARGET_PLAN_NAME=Your Root Plan Name
+TARGET_PLAN_ID=your-plan-uuid-here
 VERBOSE=false
 ```
 
-- **`TARGET_PLAN_NAME`** (required): The name of the root plan you want to process. The script will look up the collaborating scenario for you. The user must have edit access to the plan. If the user is not the owner of the plan, see [How to Share Your Plan](https://docs.visier.com/visier-people/Planning/plan%20sharing/plan%20sharing.htm).
+- **`TARGET_PLAN_ID`** (required): The UUID of the root plan you want to process. The script will look up the collaborating scenario for you. The user must have edit access to the plan. If the user is not the owner of the plan, see [How to Share Your Plan](https://docs.visier.com/visier-people/Planning/plan%20sharing/plan%20sharing.htm).
 - **`VERBOSE`** (optional): Set to `true` to enable detailed logging output. Defaults to `false`.
 
 ## Usage

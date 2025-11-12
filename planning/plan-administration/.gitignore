@@ -1,0 +1,68 @@
+# Environment files
+.env
+
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linting/formatting
+.ruff_cache/
+
+# Python version management
+.python-version
+
+# Cursor/VS Code specific
+.cursorpyright.json
+pyrightconfig.json
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Data files (may contain sensitive information)
+source.csv
+*.csv
+
+# Logs
+*.log
+logs/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg

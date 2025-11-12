@@ -47,10 +47,10 @@ Processing Order:
   Used for starting collaborations and reopening plans
 """
 
-target_plan_name = os.getenv('TARGET_PLAN_NAME')
-if target_plan_name is None:
-    raise ValueError("TARGET_PLAN_NAME environment variable must be defined")
-TARGET_PLAN_NAME: str = target_plan_name
+target_plan_id = os.getenv('TARGET_PLAN_ID')
+if target_plan_id is None:
+    raise ValueError("TARGET_PLAN_ID environment variable must be defined")
+TARGET_PLAN_ID: str = target_plan_id
 
 # Enable verbose logging for non-error information (default: False)
 VERBOSE = os.getenv('VERBOSE', 'false').lower() in ('true', '1', 'yes', 'on')
@@ -270,31 +270,18 @@ def print_plan_tree(plans_tree: List[Dict], indent: int = 0) -> None:
         if plan.get('subplans'):
             print_plan_tree(plan['subplans'], indent + 1)
 
-def find_target_plan(plans_tree: List[Dict], target_name: str) -> Optional[Dict]:
+def find_target_plan(plans_tree: List[Dict], target_id: str) -> Optional[Dict]:
     """
-    Finds the root plan that matches the target name.
-    Terminates with error if multiple matching plans are found.
+    Finds the root plan that matches the target UUID.
     :param plans_tree: List of root plans with nested subplans
-    :param target_name: Name of the plan to find
+    :param target_id: UUID of the plan to find
     :return: The matching plan dictionary or None if not found
     """
-    matching_plans = []
     for plan in plans_tree:
-        display_name = plan.get('display_name', '')
-        if display_name == target_name:
-            matching_plans.append(plan)
-    
-    if len(matching_plans) == 0:
-        return None
-    elif len(matching_plans) == 1:
-        return matching_plans[0]
-    else:
-        # Multiple matching plans found - terminate with error
-        log_error(f"CRITICAL ERROR: Multiple root plans found with name '{target_name}':")
-        for i, plan in enumerate(matching_plans):
-            log_error(f"  {i+1}. {plan.get('display_name')} ({plan.get('uuid')})")
-        log_error("Please ensure plan names are unique or contact Visier Support to resolve this issue.")
-        raise ValueError(f"Multiple root plans found with name '{target_name}'. Found {len(matching_plans)} matching plans.")
+        plan_uuid = plan.get('uuid', '')
+        if plan_uuid == target_id:
+            return plan
+    return None
 
 def find_leaf_plans(plan_tree: Dict) -> List[Dict]:
     """
@@ -788,11 +775,11 @@ def main():
         log_always("Plan tree structure not displayed due to verbose mode being disabled.")
     
     # Find the target plan
-    log_always(f"\nLooking for plan: '{TARGET_PLAN_NAME}'")
-    target_plan = find_target_plan(plans_tree, TARGET_PLAN_NAME)
+    log_always(f"\nLooking for plan with ID: '{TARGET_PLAN_ID}'")
+    target_plan = find_target_plan(plans_tree, TARGET_PLAN_ID)
     
     if not target_plan:
-        log_error(f"CRITICAL ERROR: Plan '{TARGET_PLAN_NAME}' not found.")
+        log_error(f"CRITICAL ERROR: Plan with ID '{TARGET_PLAN_ID}' not found.")
         return
     
     log_always(f"Found target plan: {target_plan.get('display_name')} ({target_plan.get('uuid')})")
