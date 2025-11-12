@@ -1,0 +1,2 @@
+python-dotenv==1.1.1
+visier-platform-sdk==22222222.99201.2176.post3
