@@ -1,0 +1,17 @@
+[bulk_create_tenants]
+create="""
+{
+    "tenants": [
+        {% for tenant in tenants %}
+        {{ ',' if loop.index0 > 0 else ''}}
+        {
+            "tenantCode": "{{ tenant.code }}",
+            "tenantDisplayName": "{{ tenant.name }}",
+            "status": "Enabled",
+            "canAdministerOtherTenants": false,
+            "provisionDate": "{{ provision_date }}"
+        }
+        {% endfor %}
+    ]
+}
+"""
