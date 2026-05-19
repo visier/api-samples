@@ -12,6 +12,7 @@ authentication
 
 ### Functional Areas
 * [Authentication](authentication) provides samples showing the various methods by which users can authenticate against the Visier platform.
+* [Administration](administration) provides samples showing how to use Administration APIs for tenant configuration workflows (SDLC).
 * [Data Intake](data-intake) provides samples showing how to use APIs to send data to your Visier tenant.
 
 ### Before You Begin

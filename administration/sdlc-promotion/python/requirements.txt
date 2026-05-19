@@ -1,0 +1,6 @@
+# Official Visier SDK used by this sample
+visier-platform-sdk>=22222222.99201.2630
+# Optional: load profiles from config.yaml
+PyYAML>=6.0
+# Optional: load secrets from a local .env file (see config.py)
+python-dotenv>=1.0.0

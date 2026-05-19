@@ -1,0 +1,28 @@
+# Copy to config.yaml and fill in real values. Never commit secrets.
+#
+# Profiles are named by *role* in the SDLC workflow (not your business environment names):
+#   source — tenant you export published work *from*
+#   target — tenant you import into and publish *to*
+#
+# Optional: use ${ENV_VAR} placeholders — values are read from the process
+# environment or from a .env file in this config file's directory.
+# The sample defaults to preview mode. Use --apply to create/import a target
+# draft, and --apply --publish only when you are ready to publish target changes.
+
+profiles:
+  source:
+    # e.g. https://<vanity>.api.visier.io  (no trailing slash)
+    base_url: "https://your-source-vanity.api.visier.io"
+    api_key: "${VISIER_SOURCE_API_KEY}"
+    username: "${VISIER_SOURCE_USERNAME}"
+    password: "${VISIER_SOURCE_PASSWORD}"
+    # Optional — Visier header TargetTenantID (analytic tenant), if your setup requires it
+    # target_tenant_id: "WFF_j1r~c7o"
+    # Optional — if your tenant requires vanity on the token request
+    # vanity: "your-source-vanity"
+
+  target:
+    base_url: "https://your-target-vanity.api.visier.io"
+    api_key: "${VISIER_TARGET_API_KEY}"
+    username: "${VISIER_TARGET_USERNAME}"
+    password: "${VISIER_TARGET_PASSWORD}"
