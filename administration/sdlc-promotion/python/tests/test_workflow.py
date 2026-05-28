@@ -141,6 +141,28 @@ class WorkflowTests(unittest.TestCase):
 
         self.assertEqual(pick_export_version_ids(history, request), ("oldest", "newest"))
 
+    def test_pick_export_version_ids_accepts_sdk_snake_case_keys(self) -> None:
+        history = {
+            "published_versions": [
+                {"id": "newest", "name": "Newest project"},
+                {"id": "oldest", "name": "Oldest project"},
+            ]
+        }
+        request = PromotionRequest(new_project=NewDraftProject(name="x"))
+
+        self.assertEqual(pick_export_version_ids(history, request), ("newest", "newest"))
+
+    def test_auto_draft_name_accepts_sdk_snake_case_keys(self) -> None:
+        name, description = build_auto_draft_name_and_description(
+            "latest",
+            _profile("https://source-vanity.api.visier.io"),
+            {"published_versions": [{"id": "v1", "name": "Production import"}]},
+            "v1",
+        )
+
+        self.assertIn("Production import", name)
+        self.assertIn("Production import", description)
+
     def test_auto_draft_name_is_limited(self) -> None:
         name, description = build_auto_draft_name_and_description(
             "latest",

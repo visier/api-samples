@@ -9,6 +9,7 @@ teach the promotion sequence, not become a second Python SDK.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Default timeout (seconds) for HTTP calls (exports can be large)
 _DEFAULT_TIMEOUT = 120
+_SECRET_FIELD_PATTERN = re.compile(
+    r'(?i)("?(?:api[_-]?key|apikey|password|(?:access|asid|refresh)?[_-]?token|authorization)"?\s*[:=]\s*)"[^"\s,}]+"'
+)
 
 
 @dataclass
@@ -91,6 +95,7 @@ def _safe_api_error_message(exc: Exception) -> str:
         pieces.append(str(reason))
     if body:
         body_text = str(body).strip()
+        body_text = _SECRET_FIELD_PATTERN.sub(r'\1"<redacted>"', body_text)
         if len(body_text) > 300:
             body_text = body_text[:300] + "..."
         pieces.append(body_text)
@@ -171,6 +176,8 @@ class VisierClient:
         List all published production versions by following pagination until a page
         is empty or shorter than ``page_size``.
         """
+        if page_size <= 0:
+            raise ValueError("page_size must be greater than zero")
         merged: list[dict[str, Any]] = []
         start = 0
         while True:
@@ -218,7 +225,15 @@ class VisierClient:
                 "Expected a ZIP file but got JSON. Response may be an error: " + snippet,
                 step=2,
             )
-        if "zip" not in content_type and content[:2] != b"PK":
+        if not content:
+            raise VisierSDLCError("Expected a ZIP file but export response body was empty.", step=2)
+        if content[:2] != b"PK":
+            raise VisierSDLCError(
+                "Expected a ZIP file but export response did not have a ZIP signature "
+                f"(Content-Type: {content_type or 'missing'}).",
+                step=2,
+            )
+        if "zip" not in content_type:
             logger.warning("Unexpected Content-Type for export: %s", content_type or "(missing)")
         return bytes(content)
 

@@ -80,8 +80,8 @@ def _published_row_for_id(history: dict[str, Any], version_id: str) -> dict[str,
     such row (no fallback to another version).
     """
     want = str(version_id).strip()
-    versions = history.get("publishedVersions")
-    if not isinstance(versions, list):
+    versions = _published_versions(history)
+    if not versions:
         return None
     for v in versions:
         if not isinstance(v, dict):
@@ -90,6 +90,14 @@ def _published_row_for_id(history: dict[str, Any], version_id: str) -> dict[str,
         if got and got == want:
             return v
     return None
+
+
+def _published_versions(history: dict[str, Any]) -> list[Any]:
+    """Return published version rows from either JSON or generated-SDK field names."""
+    versions = history.get("publishedVersions")
+    if versions is None:
+        versions = history.get("published_versions")
+    return versions if isinstance(versions, list) else []
 
 
 def _build_all_mode_display_name(vanity: str) -> str:
@@ -335,8 +343,8 @@ def pick_export_version_ids(
                 "export_full_published_history (or turn export_full_published_history off).",
                 step=1,
             )
-        versions = history.get("publishedVersions")
-        if not isinstance(versions, list) or not versions:
+        versions = _published_versions(history)
+        if not versions:
             raise VisierSDLCError(
                 "No publishedVersions in the API response (or list is empty); nothing to export.",
                 step=1,
@@ -365,8 +373,8 @@ def pick_export_version_ids(
             )
         return manual_start.strip(), manual_end.strip()
 
-    versions = history.get("publishedVersions")
-    if not isinstance(versions, list) or not versions:
+    versions = _published_versions(history)
+    if not versions:
         raise VisierSDLCError(
             "No publishedVersions in the API response (or list is empty); nothing to export.",
             step=1,
