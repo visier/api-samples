@@ -2,10 +2,16 @@ import csv
 import os
 
 from dotenv import load_dotenv
-from visier_platform_sdk import ApiClient, Configuration, DataModelApi, PlanDataLoadApi
+from visier_platform_sdk import (
+    ApiClient,
+    Configuration,
+    DataModelApi,
+    PlanDataLoadApi,
+    PlanEventsApi,
+    PlanningEventResponse,
+    PromotedRowDTO,
+)
 from visier_platform_sdk.exceptions import ApiException, BadRequestException, NotFoundException
-
-from planning_events_api import PlanningEventsApi
 
 load_dotenv()
 
@@ -15,22 +21,21 @@ OUTPUT_CSV = "event_upload.csv"
 
 config = Configuration.from_env()
 api_client = ApiClient(config)
-events_api = PlanningEventsApi(api_client)
+events_api = PlanEventsApi(api_client)
 data_model_api = DataModelApi()
 plan_data_load_api = PlanDataLoadApi(api_client)
 
 
-def get_promoted_rows(event: dict) -> list[dict]:
-    event_type = event.get("eventType")
-    if event_type in ("memberPromoted", "autoPromotion"):
-        return event.get("promotionData", {}).get("promotedRows", [])
-    elif event_type == "bulkPromotionDemotionEvent":
-        return event.get("bulkPromotionDemotionData", {}).get("promotedRows", [])
+def get_promoted_rows(event: PlanningEventResponse) -> list[PromotedRowDTO]:
+    if event.event_type in ("memberPromoted", "autoPromotion"):
+        return event.promotion_data.promoted_rows or []
+    elif event.event_type == "bulkPromotionDemotionEvent":
+        return event.bulk_promotion_demotion_data.promoted_rows or []
     else:
-        raise ValueError(f"Unsupported event type: {event_type}")
+        raise ValueError(f"Unsupported event type: {event.event_type}")
 
 
-def build_csv(promoted_rows: list[dict], schema, plan_item_id: str, output_path: str) -> int:
+def build_csv(promoted_rows: list[PromotedRowDTO], schema, plan_item_id: str, output_path: str) -> int:
     """
     Transforms promoted rows from a planning event into the CSV format required
     by the Planning Data Load API.
@@ -56,8 +61,8 @@ def build_csv(promoted_rows: list[dict], schema, plan_item_id: str, output_path:
         writer.writeheader()
         for promoted_row in promoted_rows:
             dim_lookup = {
-                f"{m['dimensionId']}.{m['levelId']}": m['memberId']
-                for m in promoted_row.get("memberPath", [])
+                f"{m.dimension_id}.{m.level_id}": m.member_id
+                for m in (promoted_row.member_path or [])
             }
             for period_date in period_dates:
                 row = {"periodId": period_date}
@@ -119,9 +124,9 @@ def main() -> None:
         print(f"Failed to fetch event '{EVENT_ID}': HTTP {e.status} - {e.reason}")
         return
 
-    plan_id = event["planId"]
-    scenario_id = event.get("scenarioId")
-    event_type = event.get("eventType")
+    plan_id = event.plan_id
+    scenario_id = event.scenario_id
+    event_type = event.event_type
     print(f"Event type: {event_type}, plan: {plan_id}")
 
     try:
