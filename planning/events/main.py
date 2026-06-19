@@ -11,7 +11,7 @@ from visier_platform_sdk import (
     PlanningEventResponse,
     PromotedRowDTO,
 )
-from visier_platform_sdk.exceptions import ApiException, BadRequestException, NotFoundException
+from visier_platform_sdk.exceptions import ApiException, BadRequestException, ForbiddenException, NotFoundException
 
 load_dotenv()
 
@@ -79,29 +79,34 @@ def validate_and_upload(plan_id: str, scenario_id: str, csv_path: str) -> None:
     with open(csv_path, "rb") as f:
         data = f.read()
 
-    print("Validating CSV...")
-    validation = plan_data_load_api.plan_data_upload(
-        plan_id,
-        scenario_id,
-        calculation="NONE",
-        method="VALIDATE",
-        file=data,
-    )
-    if validation.errors:
-        print(f"Validation failed with {len(validation.errors)} error(s). Upload aborted.")
-        for err in validation.errors:
-            print(f"  Row {err.row}: [{err.rci}] {err.error_message}")
-        return
+    try:
+        print("Validating CSV...")
+        validation = plan_data_load_api.plan_data_upload(
+            plan_id,
+            scenario_id,
+            calculation="NONE",
+            method="VALIDATE",
+            file=data,
+        )
+        if validation.errors:
+            print(f"Validation failed with {len(validation.errors)} error(s). Upload aborted.")
+            for err in validation.errors:
+                print(f"  Row {err.row}: [{err.rci}] {err.error_message}")
+            return
 
-    print("Validation passed. Uploading...")
-    result = plan_data_load_api.plan_data_upload(
-        plan_id,
-        scenario_id,
-        calculation="NONE",
-        method="STRICT_UPLOAD",
-        file=data,
-    )
-    print(f"Upload successful. Updated {result.updated_cells_count} cells.")
+        print("Validation passed. Uploading...")
+        result = plan_data_load_api.plan_data_upload(
+            plan_id,
+            scenario_id,
+            calculation="NONE",
+            method="STRICT_UPLOAD",
+            file=data,
+        )
+        print(f"Upload successful. Updated {result.updated_cells_count} cells.")
+    except ForbiddenException:
+        print("Upload failed: you do not have edit rights on this plan or scenario.")
+    except ApiException as e:
+        print(f"Upload failed: HTTP {e.status} - {e.reason}")
 
 
 def main() -> None:
