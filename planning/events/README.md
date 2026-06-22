@@ -3,10 +3,10 @@
 This is a sample script that reads a planning promotion event and loads data into the promoted rows.
 
 The script:
-1. Fetches a planning event by ID using the [Plan Events API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/PlanEvents)
-2. Fetches the plan's schema to determine which dimensions and time periods to populate
-3. Builds a CSV with value `1` for the configured plan item across all promoted rows and time periods
-4. Validates and uploads the CSV using the [Plan Data Load API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/PlanDataLoad)
+1. Fetches a planning event by ID using the [Plan Events API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/PlanEvents).
+2. Fetches the plan's schema to determine which dimensions and time periods to populate.
+3. Builds a CSV with value `1` for the configured plan item across all promoted rows and time periods.
+4. Validates and uploads the CSV using the [Plan Data Load API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/PlanDataLoad).
 
 The following promotion event types are supported: `memberPromoted`, `autoPromotion`, and `bulkPromotionDemotionEvent`.
 
@@ -44,8 +44,8 @@ EVENT_ID=your-event-uuid-here
 PLAN_ITEM_ID=your-plan-item-id-here
 ```
 
-- **`EVENT_ID`** (required): The UUID of the promotion event to process. The user must have the VIEW right on the plan the event belongs to. You get get an Event ID with the [Webhook API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/Webhooks) by using for events `planRowPromotionNotification`.
-- **`PLAN_ITEM_ID`** (required): The ID of the plan item to populate with data, for example `Headcount_And_Cost_Planning.Headcount`. You can find the plan item IDs by calling the Plan Data Load API's get plan schema endpoint.
+- **`EVENT_ID`** (required): The UUID of the promotion event to process. The user must have View access to the plan the event belongs to. To get the event ID, use the [Webhook API](https://docs.visier.com/developer/apis/references/api-reference.htm#tag/Webhooks) to create a webhook for the `planRowPromotionNotification` event. When the webhook triggers, its payload returns the `eventID`.
+- **`PLAN_ITEM_ID`** (required): The ID of the plan item to populate with data, for example `Headcount_And_Cost_Planning.Headcount`. To get the plan item ID, call `GET /v1alpha/planning/model/plans/{id}?withSchema=true`.
 
 ## Usage
 
@@ -62,6 +62,6 @@ python main.py
 4. **Validate and upload**: Runs a dry-run validation first. If no errors are found, uploads the CSV using `STRICT_UPLOAD`. If validation fails, the errors are printed and the upload is skipped.
 
 ### Error Handling
-- **Event not found (404)**: The event does not exist, or the user lacks the VIEW right on the plan or does not have full access to all rows in the plan tree. The server returns 404 in all these cases to avoid leaking whether the event exists.
-- **Unsupported event type (400)**: The event type is not supported by the getEvent API.
-- **No edit rights (403)**: The user does not have edit rights on the plan or scenario and cannot upload data.
+- **Event not found (404)**: The event does not exist, the user does not have View access to the plan, or the user does not have full access to all rows in the plan. The server returns 404 in all these cases to avoid leaking whether the event exists.
+- **Unsupported event type (400)**: The event type is not supported by the Plan Events API.
+- **No edit rights (403)**: The user does not have edit rights to the plan or scenario and cannot upload data.
