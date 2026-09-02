@@ -137,6 +137,18 @@ def build_csv(promoted_rows: list[PromotedRowDTO], schema, plan_item_id: str, ou
     key. Segment levels absent from the member path are left empty, which the API
     interprets as aggregating across all values for that dimension.
 
+    The resulting file has a periodId column, one column per segment level, and one
+    column per plan item. For a plan segmented by country and state, planning the
+    Headcount plan item, a promoted row for British Columbia looks like this:
+
+        periodId,Location.Location_1,Location.Location_2,Headcount_And_Cost_Planning.Headcount
+        2026-01-01,[Location].[Canada],[Location].[Canada].[BC],1
+        2026-02-01,[Location].[Canada],[Location].[Canada].[BC],1
+        2026-03-01,[Location].[Canada],[Location].[Canada].[BC],1
+
+    Note that this sample writes the value 1 into every cell. A real integration
+    computes the value per row and per period; see the comment at the assignment below.
+
     Returns the number of rows written.
     """
     # Segment level IDs are the dimension columns in the upload CSV, e.g. "Location.Location_2".
@@ -160,6 +172,11 @@ def build_csv(promoted_rows: list[PromotedRowDTO], schema, plan_item_id: str, ou
                 row = {"periodId": period_date}
                 for seg_id in segment_level_ids:
                     row[seg_id] = dim_lookup.get(seg_id, "")
+                # Placeholder value: this sample writes 1 to every promoted row and
+                # every time period, purely to show the shape of the upload.
+                # A real integration would source the value here instead, for example
+                # the headcount of an approved requisition or a salary from a pay band,
+                # and would typically differ per row and per time period.
                 row[plan_item_id] = 1
                 writer.writerow(row)
                 row_count += 1
@@ -168,6 +185,22 @@ def build_csv(promoted_rows: list[PromotedRowDTO], schema, plan_item_id: str, ou
 
 
 def validate_and_upload(plan_id: str, scenario_id: str, csv_path: str) -> None:
+    """
+    Loads the CSV into a plan scenario in two passes.
+
+    The first pass uses the VALIDATE method, which runs the file through every
+    validation step without changing the plan, and reports the row and reason for
+    each problem. The second pass loads the data with STRICT_UPLOAD, which applies
+    the file only if every row is valid; a single bad row fails the whole upload.
+    Validating first means a rejected file is reported in full instead of failing
+    on its first error.
+
+    Both passes use the NONE calculation method, so the plan is not recalculated as
+    part of the load. Note that a successful second pass writes to the plan.
+
+    Alternatively, SKIP_ERRORS loads the valid rows and discards the rest, which
+    suits feeds where partial data is preferable to no data.
+    """
     with open(csv_path, "rb") as f:
         data = f.read()
 
