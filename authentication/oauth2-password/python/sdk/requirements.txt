@@ -1,1 +1,1 @@
-visier_api_analytic_model>=0.99201.1531
+visier-platform-sdk>=22222222.99201.2010
