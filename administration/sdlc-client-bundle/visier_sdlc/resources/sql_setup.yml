@@ -1,0 +1,23 @@
+resources:
+  jobs:
+    sql_setup_job:
+      name: "[${bundle.target}] SQL Setup"
+      
+      parameters:
+        - name: catalog
+          default: ${var.catalog_name}
+        - name: schema
+          default: ${var.schema_name}
+        - name: table
+          default: ${var.state_table_name}
+
+      tasks:
+        - task_key: run_init_sql
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../sql/init_tables.sql
+            parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              table: "{{job.parameters.table}}"

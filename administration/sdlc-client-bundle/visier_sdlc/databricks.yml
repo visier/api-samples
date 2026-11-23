@@ -1,0 +1,38 @@
+bundle:
+  name: visier_sdlc
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - src/visier-sdlc/tests/**
+    - src/visier-sdlc/.env*
+    - src/visier-sdlc/pytest.ini
+    - src/visier-sdlc/instance/**
+    - src/visier-sdlc/**/__pycache__/**
+    - src/visier-sdlc/**/*.pyc
+    - src/visier-sdlc/requirements-dev.txt
+
+variables:
+  catalog_name:
+    description: "Target Unity Catalog"
+    default: "main"
+  schema_name:
+    description: "Target Schema"
+    default: "app_schema"
+  warehouse_id:
+    description: "SQL Warehouse ID (required: pass --var warehouse_id=<id>)"
+  secret_prefix:
+    description: "Prefix for tenant secret names in catalog_name.schema_name; secrets are {prefix}{source|target}-{field}, e.g. visier-sdlc-source-host"
+    default: "visier-sdlc-"
+  app_name:
+    description: "Databricks App name"
+    default: "visier-sdlc"
+  state_table_name:
+    description: "Unqualified promotion state table name in catalog_name.schema_name"
+    default: "promotion_state"
+
+targets:
+  default:
+    default: true

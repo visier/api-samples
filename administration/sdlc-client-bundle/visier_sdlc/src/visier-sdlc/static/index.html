@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f1e7db">
+  <title>Tenant promotion · Visier</title>
+  <meta name="description" content="Review, synchronize, and safely promote Visier development versions to production.">
+  <link rel="icon" href="/static/visier-icon.png" type="image/png" sizes="512x512">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="preload" href="/static/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/crimson-pro-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <aside class="sidebar">
+    <a href="/" class="brand" aria-label="Visier home"><img class="brand-mark" src="/static/visier-icon.png" width="34" height="34" alt=""><img class="brand-wordmark" src="/static/visier-logo.svg?v=black" width="124" height="28" alt="Visier"></a>
+    <div class="workspace"><div class="workspace-logo">W</div><div>Workspace<span>Tenant administration</span></div><span class="workspace-chevron">⌄</span></div>
+    <div class="nav-label">MANAGE</div>
+    <nav aria-label="Main navigation">
+      <button class="nav-item active" data-view="promotions"><i data-icon="layers"></i>Tenant promotion</button>
+      <button class="nav-item" data-view="activity"><i data-icon="history"></i>Activity log</button>
+      <button class="nav-item" data-view="connections"><i data-icon="settings"></i>Connections</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-note"><span class="small-orbit">↗</span><strong>Move changes forward.</strong><p>A clear path from development to production.</p></div>
+      <button class="help-button" id="help"><i data-icon="help"></i>Promotion guide<i data-icon="external"></i></button>
+      <div class="profile"><div class="avatar admin">A</div><div>Administrator<span>Tenant management</span></div><span class="online-dot"></span></div>
+    </div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar"><a href="/" class="mobile-brand" aria-label="Visier home"><img src="/static/visier-icon.png" width="25" height="25" alt=""></a><div class="breadcrumbs">Administration<i data-icon="chevron"></i><span id="breadcrumb-current">Tenant promotion</span></div><div class="topbar-right"><span class="mode-badge" id="mode-badge">Connecting</span><span class="topbar-divider"></span><div class="avatar top-avatar" aria-label="Administrator">A</div></div></header>
+    <nav class="mobile-nav" aria-label="Mobile navigation"><button data-view="promotions">Tenant promotion</button><button data-view="activity">Activity log</button><button data-view="connections">Connections</button><button id="mobile-help" aria-label="Promotion guide"><i data-icon="help"></i></button></nav>
+    <main id="main" tabindex="-1">
+      <section class="page-heading"><div><div class="eyebrow">RELEASE MANAGEMENT</div><h1 id="page-title">Tenant promotion</h1><p id="page-description">Bring your development changes to production with confidence.</p></div><button id="refresh" class="button secondary"><i data-icon="refresh"></i><span>Refresh</span></button></section>
+      <div id="error-banner" class="error-banner" role="alert" hidden></div>
+      <div id="loading" class="loading-state"><span class="spinner"></span>Connecting to your tenants…</div>
+      <div id="promotion-view" hidden>
+        <section class="summary-grid" aria-label="Promotion overview">
+          <div class="summary-card"><div class="summary-icon coral"><i data-icon="layers"></i></div><div><span class="summary-label">Ready for promotion</span><div class="summary-value"><span id="pending-count">—</span><small>pending versions</small></div></div><span class="mini-tag" id="pending-tag">Development</span></div>
+          <div class="summary-card"><div class="summary-icon mint"><i data-icon="sync"></i></div><div><span class="summary-label" id="sync-summary-label">Last successful sync</span><div class="summary-value date-value" id="last-sync">—</div></div></div>
+          <div class="summary-card"><div id="health-icon" class="summary-icon amber"><i data-icon="shield"></i></div><div><span class="summary-label">Production health</span><div class="summary-value health-value" id="health-value">Checking…</div></div><span id="health-dot" class="status-dot amber-dot"></span></div>
+        </section>
+        <div id="operation-banner" class="notice progress-notice" role="status" hidden></div>
+        <div class="section-tabs" role="tablist" aria-label="Promotion type"><button id="sources-tab" class="tab active" role="tab" aria-selected="true" aria-controls="sources-panel"><i data-icon="database"></i>Unversioned sources</button><button id="versions-tab" class="tab" role="tab" aria-selected="false" aria-controls="version-panel" tabindex="-1"><i data-icon="layers"></i>Production versions<span class="tab-count" id="tab-count">0</span></button><span class="tabs-end"><span class="live-dot"></span><span id="checked-at">Checking tenants</span></span></div>
+        <section id="sources-panel" class="content-card" role="tabpanel" aria-labelledby="sources-tab">
+          <div class="section-heading"><div><h2>Unversioned sources</h2><p>Copy all current source definitions from development to production.</p></div></div>
+          <p id="sources-direction"></p>
+          <p>Sources are imported directly into the target tenant. This does not create a draft project or a production version, and version rollback does not undo a source import.</p>
+          <label class="baseline-verification"><input id="sources-replace" type="checkbox" aria-describedby="sources-replace-hint"><span>Replace all existing target sources</span></label>
+          <p id="sources-replace-hint" class="field-hint">Select this option to enable migration. Replacing all removes existing target sources before importing the development sources.</p>
+          <div id="sources-result" class="sources-result" role="status" hidden></div>
+          <div class="dialog-actions"><button id="migrate-sources" class="button primary" disabled><i data-icon="sync"></i>Migrate sources</button></div>
+        </section>
+        <div id="version-panel" role="tabpanel" aria-labelledby="versions-tab" hidden>
+          <div id="drift-banner" class="notice warning" hidden><div class="notice-icon"><i data-icon="warning"></i></div><div><strong>Production has changes made outside this sync</strong><p id="drift-description">Roll back to the last synchronized version before promoting development changes.</p></div><button id="drift-rebaseline" class="button warning-action">Reset sync baseline<i data-icon="settings"></i></button></div>
+          <div id="issue-banner" class="notice warning" hidden><div><strong>Review the sync baseline</strong><p id="issue-description"></p></div><button id="issue-rebaseline" class="button warning-action">Reset sync baseline<i data-icon="settings"></i></button></div>
+          <div class="environments">
+            <section class="environment-card source-card" aria-labelledby="source-heading">
+              <div class="environment-header"><div class="environment-symbol dev-symbol"><i data-icon="code"></i></div><div><div class="environment-label">SOURCE TENANT</div><h2 id="source-heading">Development</h2></div><span class="environment-tag dev-tag">Development</span></div>
+              <div class="tenant-line"><span class="connection-dot"></span><span id="source-connection">Connected</span><span id="source-total"></span></div>
+              <div class="table-container"><table class="versions-table source-table"><thead><tr><th scope="col">VERSION DESCRIPTION</th><th scope="col">VERSION NUMBER</th></tr></thead><tbody id="source-rows"></tbody></table></div>
+              <div class="environment-footer"><i data-icon="info"></i><span>Select a version to include all earlier unsynced changes.</span></div>
+            </section>
+            <div class="flow-arrow" aria-hidden="true"><i data-icon="arrow"></i></div>
+            <section class="environment-card target-card" aria-labelledby="target-heading">
+              <div class="environment-header"><div class="environment-symbol prod-symbol"><i data-icon="globe"></i></div><div><div class="environment-label">TARGET TENANT</div><h2 id="target-heading">Production</h2></div><span class="environment-tag prod-tag">Production</span></div>
+              <div class="tenant-line"><span class="connection-dot"></span><span id="target-connection">Connected</span><span id="target-total"></span></div>
+              <div class="table-container"><table class="versions-table target-table"><thead><tr><th scope="col">VERSION DESCRIPTION</th><th scope="col">VERSION NUMBER</th></tr></thead><tbody id="target-rows"></tbody></table></div>
+              <div class="environment-footer target-footer"><span class="footer-baseline"><i data-icon="shield"></i><span id="baseline-label">Last sync is your rollback point</span></span><button id="rollback" class="text-button"><i data-icon="undo"></i>Roll back</button></div>
+            </section>
+          </div>
+          <section class="promotion-bar" aria-label="Promotion selection"><div class="selection-icon"><i data-icon="layers"></i></div><div class="selection-description"><strong id="selection-heading">Choose what moves forward</strong><p id="selection-detail">Select a development version to prepare your promotion.</p></div><button id="clear-selection" class="text-button" hidden>Clear</button><div class="sync-actions" id="sync-actions">
+            <div class="sync-split"><button id="sync" class="button primary" disabled><i data-icon="sync"></i><span>Sync to production</span></button><button id="sync-menu-toggle" class="button primary sync-menu-toggle" aria-label="More sync actions" aria-haspopup="menu" aria-expanded="false" aria-controls="sync-menu" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
+            <div id="sync-menu" class="sync-menu" role="menu" aria-label="Sync actions" hidden>
+              <button id="menu-sync" role="menuitem" tabindex="-1" disabled><i data-icon="sync"></i>Sync to production</button>
+              <button id="reset-baseline" role="menuitem" tabindex="-1"><i data-icon="settings"></i>Reset sync baseline</button>
+              <button id="restore-baseline" role="menuitem" tabindex="-1" hidden><i data-icon="undo"></i>Restore previous baseline</button>
+            </div>
+          </div></section>
+          <div class="workflow-note"><i data-icon="lock"></i><span>Changes are exported, imported into a draft, then committed and published.</span></div>
+        </div>
+        <section class="recent-activity"><div class="section-heading"><h2>Recent activity</h2><button class="text-button" data-view="activity">View activity log<i data-icon="arrow"></i></button></div><div id="recent-rows"></div></section>
+        <div id="demo-controls" class="demo-controls" hidden><span><span class="demo-dot"></span>Demo workspace · Sample tenants, real workflow</span><button class="text-button" id="add-drift">Simulate production drift<i data-icon="plus"></i></button></div>
+      </div>
+      <section id="activity-view" hidden><div class="content-card"><div class="section-heading"><div><h2>Promotion history</h2><p>Successful operations and attempts for this tenant pair.</p></div><span id="activity-count" class="environment-tag dev-tag">0 operations</span></div><div id="activity-rows"></div></div></section>
+      <section id="connections-view" hidden><div class="connections-grid" id="connections-content"></div><div class="content-card connection-help"><i data-icon="lock"></i><div><h2>Secrets stay on the server</h2><p>Tenant connections are configured by your app administrator. Local credentials can be loaded from a .env file. Databricks deployments can use a secrets provider.</p><p>Connection changes take effect after restarting the app.</p></div></div></section>
+      <footer class="page-footer"><span>Visier Tenant Administration</span><span>Thoughtful changes. Confident releases.</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="confirm-dialog" aria-labelledby="dialog-title"><form method="dialog"><div class="dialog-icon" id="dialog-icon"><i data-icon="sync"></i></div><h2 id="dialog-title">Review promotion</h2><p id="dialog-description"></p><div id="dialog-details" class="dialog-details"></div><div id="project-fields">
+      <label class="baseline-field" for="project-name">Draft project display name<input id="project-name" name="project_name" type="text" value="Development tenant promotion" maxlength="50" aria-describedby="project-name-hint" required></label>
+      <p id="project-name-hint" class="field-hint">Maximum 50 characters.</p>
+      <label class="baseline-field" for="project-description">Description (optional)<textarea id="project-description" name="project_description" rows="3" placeholder="Describe the changes in this release"></textarea></label>
+      <label class="baseline-field" for="project-version">Version number<input id="project-version" type="number" readonly aria-describedby="project-version-hint"></label>
+      <p id="project-version-hint" class="field-hint">Automatically increments the previous production version.</p>
+    </div><div class="dialog-actions"><button value="cancel" class="button secondary" formnovalidate>Cancel</button><button value="confirm" id="confirm-action" class="button primary">Confirm sync<i data-icon="arrow"></i></button></div></form></dialog>
+  <dialog id="recovery-dialog" aria-labelledby="recovery-title" aria-describedby="recovery-description">
+    <form id="recovery-form">
+      <h2 id="recovery-title">Recover operation</h2>
+      <p id="recovery-description">Correct the target user's permissions before retrying. Retry publishes the existing draft without exporting or importing again.</p>
+      <div id="recovery-details" class="dialog-details"></div>
+      <label class="baseline-field" for="recovery-action">Next step<select id="recovery-action">
+        <option value="retry">Retry publishing this draft</option>
+        <option value="discard">Delete draft and start again</option>
+        <option value="published">Publication completed — confirm version</option>
+        <option value="dismiss">Dismiss operation and keep any draft</option>
+      </select></label>
+      <label class="baseline-field" id="recovery-target-field" for="recovery-target" hidden>Published production version<select id="recovery-target"></select></label>
+      <p id="recovery-effect"></p>
+      <label class="baseline-verification"><input id="recovery-verified" type="checkbox" required><span id="recovery-verification"></span></label>
+      <p id="recovery-feedback" role="status"></p>
+      <div class="dialog-actions"><button type="button" id="recovery-cancel" class="button secondary">Cancel</button><button type="submit" id="recovery-confirm" class="button primary" disabled>Retry publishing</button></div>
+    </form>
+  </dialog>
+  <dialog id="baseline-dialog" aria-labelledby="baseline-title" aria-describedby="baseline-description">
+    <form id="baseline-form">
+      <h2 id="baseline-title">Reset sync baseline</h2>
+      <p id="baseline-description">Use this after verifying changes made outside the tool. This updates the saved sync and rollback points without changing either tenant.</p>
+      <label class="baseline-field" for="baseline-scope">Reset baseline for<select id="baseline-scope"><option value="both">Source and target</option><option value="source">Source only</option><option value="target">Target only</option></select></label>
+      <label class="baseline-field" id="baseline-source-field" for="baseline-source">Source version<select id="baseline-source" required></select></label>
+      <label class="baseline-field" id="baseline-target-field" for="baseline-target">Target version<select id="baseline-target" required></select></label>
+      <div id="baseline-preview" class="dialog-details"></div>
+      <label class="baseline-field" for="baseline-reason">Reason<textarea id="baseline-reason" rows="2" maxlength="1000" required placeholder="Describe the external fix and how you verified it"></textarea></label>
+      <label class="baseline-verification"><input id="baseline-verified" type="checkbox" required><span>I verified that source changes through this baseline are already accounted for in the target, and that accepted target changes will not cause merge conflicts with pending development changes.</span></label>
+      <p id="baseline-feedback" class="baseline-feedback" role="status"></p>
+      <div class="dialog-actions"><button type="button" id="baseline-cancel" class="button secondary">Cancel</button><button type="submit" id="baseline-confirm" class="button primary" disabled>Confirm baseline reset</button></div>
+    </form>
+  </dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><form method="dialog"><div class="help-header"><span class="eyebrow">PROMOTION GUIDE</span><button value="close" class="icon-button" aria-label="Close guide">×</button></div><h2 id="help-title">A clear path to production</h2><p class="help-intro">Keep your tenants aligned, one considered release at a time.</p><ol class="guide-steps"><li><strong>Review your development changes</strong><p>Select the newest version you want to promote. All earlier unsynced versions are included automatically.</p></li><li><strong>Resolve production drift</strong><p>If changes were made directly in production, roll back to the saved baseline. Use Reset sync baseline if the issue was resolved outside this tool, or the production changes are known not to cause merge conflicts with pending development changes.</p></li><li><strong>Sync with confidence</strong><p>The app exports a ZIP, creates a production draft, imports the changes, and commits and publishes it.</p></li><li><strong>Check the result</strong><p>Both lists refresh automatically. A successful sync becomes the new baseline and rollback point.</p></li></ol><button value="close" class="button primary full-width">Got it<i data-icon="check"></i></button></form></dialog>
+</body>
+</html>

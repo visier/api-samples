@@ -1,0 +1,41 @@
+resources:
+  apps:
+    visier_sdlc_app:
+      name: ${var.app_name}
+      description: Simple dependency and deployment check
+      source_code_path: ../src/visier-sdlc
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+        - name: promotion-state
+          uc_securable:
+            securable_full_name: ${var.catalog_name}.${var.schema_name}.${var.state_table_name}
+            securable_type: TABLE
+            permission: MODIFY
+      # Tenant secrets are NOT app resources: Apps resources cannot reference Unity Catalog secrets,
+      # so the app reads them at startup via the SDK as its service principal. Required secrets, in
+      # ${var.catalog_name}.${var.schema_name}:
+      #   ${var.secret_prefix}source-host   ${var.secret_prefix}target-host      (required)
+      #   ${var.secret_prefix}{source,target}-{vanity,username,password}        (basic auth)
+      #   ${var.secret_prefix}{source,target}-{access-token,asid-token}         (token auth)
+      #   ${var.secret_prefix}{source,target}-{api-key,tenant-id,client-id,client-secret}  (optional)
+      # `databricks bundle run setup_secrets` (databricks.yml `scripts`) creates them from the
+      # secret_* bundle variables and grants the service principal READ_SECRET on each.
+      config:
+        command: ["gunicorn", "wsgi:app", "--bind", "0.0.0.0:8000",
+                  "--workers", "1", "--threads", "8", "--timeout", "300"]
+        env:
+          - name: APP_MODE
+            value: live
+          - name: VISIER_SECRETS_CATALOG
+            value: ${var.catalog_name}
+          - name: VISIER_SECRETS_SCHEMA
+            value: ${var.schema_name}
+          - name: VISIER_SECRET_PREFIX
+            value: ${var.secret_prefix}
+          - name: SQL_WAREHOUSE_ID
+            value_from: sql-warehouse
+          - name: PROMOTION_STATE_TABLE
+            value: ${var.state_table_name}
