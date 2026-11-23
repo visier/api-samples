@@ -33,9 +33,12 @@ def setup(tmp_path):
 
 
 @pytest.fixture
-def adapter():
+def adapter(monkeypatch):
     credentials = SimpleNamespace(configuration=lambda role: dict(
-        host=f"https://{role}.example.com", vanity=role, access_token="private-token"))
+        host=f"https://{role}.example.com", vanity=role, username="user", password="password"))
+    import visier_platform_sdk as sdk
+    monkeypatch.setattr(sdk.configuration.http, "request",
+                        lambda *args, **kwargs: HTTPResponse(status=200, body=b"private-token"))
     return VisierGateway(credentials)
 
 
@@ -52,7 +55,7 @@ def test_sdk_source_export_import_transport(adapter, monkeypatch, replace, overr
         assert url == "https://source.example.com/v1beta/admin/sources"
         assert json.loads(kwargs["body"]) == {"operation": "exportSources"}
         assert kwargs["headers"]["Accept"] == "application/zip, application/json"
-        assert kwargs["headers"]["Authorization"] == "Bearer private-token"
+        assert kwargs["headers"]["Cookie"] == "VisierASIDToken=private-token"
         assert kwargs["headers"].get("TargetTenantID") == ("development-id" if override else None)
         return HTTPResponse(status=200, body=archive, headers={"Content-Type": "application/zip"})
 

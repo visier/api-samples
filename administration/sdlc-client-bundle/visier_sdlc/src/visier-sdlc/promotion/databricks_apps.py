@@ -18,9 +18,26 @@ TABLE_NAME = re.compile(r"[A-Za-z_]\w*\.[A-Za-z_]\w*\.[A-Za-z_]\w*")
 SECRET_PART = re.compile(r"[A-Za-z_][\w-]*")
 
 REQUIRED_FIELDS = ("host",)
-OPTIONAL_FIELDS = ("vanity", "username", "password", "api_key", "tenant_id", "client_id", "client_secret",
-                   "access_token", "asid_token")
+OPTIONAL_FIELDS = ("vanity", "username", "password", "tenant_id")
 SECRET_PREFIX = re.compile(r"(?:[A-Za-z_][\w-]*)?")
+
+
+def state_location(env):
+    """Resolve a UI-attached table or the bundle's explicit catalog/schema/table."""
+    from .storage import qualified_table_name
+
+    full_name = env.get("PROMOTION_STATE_TABLE_FULL_NAME")
+    if full_name:
+        if not TABLE_NAME.fullmatch(full_name):
+            raise ValueError("Expected a catalog.schema.table identifier for promotion-state")
+        catalog, schema, table = full_name.split(".")
+        for key, value in (("VISIER_SECRETS_CATALOG", catalog), ("VISIER_SECRETS_SCHEMA", schema),
+                           ("PROMOTION_STATE_TABLE", table)):
+            if env.get(key) and env[key] != value:
+                raise ValueError(f"{key} conflicts with the attached promotion-state table")
+        return catalog, schema, full_name
+    catalog, schema = env["VISIER_SECRETS_CATALOG"], env["VISIER_SECRETS_SCHEMA"]
+    return catalog, schema, qualified_table_name(catalog, schema, env["PROMOTION_STATE_TABLE"])
 
 
 class UnityCatalogSecretsCredentials:

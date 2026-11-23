@@ -1,0 +1,18 @@
+{
+  "catalog_name": "",
+  "schema_name": "",
+  "warehouse_id": "",
+  "secret_prefix": "visier-sdlc-",
+  "app_name": "",
+  "state_table_name": "promotion_state",
+  "secret_source_host": "",
+  "secret_source_vanity": "",
+  "secret_source_username": "",
+  "secret_source_password": "",
+  "secret_target_host": "",
+  "secret_target_vanity": "",
+  "secret_target_username": "",
+  "secret_target_password": "",
+  "source_name": "Development",
+  "target_name": "Production"
+}

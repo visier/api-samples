@@ -17,7 +17,6 @@ def build_app(spark, get_secret):
                      ("host", "vanity", "username", "password")}
               for role in ("source", "target")},
     )
-    # Add "api_key" to the secret mapping above if required by your server.
     # Add "tenant_id" for a role only when addressing a different managed tenant.
     table = qualified_table_name(
         os.environ["VISIER_SECRETS_CATALOG"], os.environ["VISIER_SECRETS_SCHEMA"], os.environ["PROMOTION_STATE_TABLE"],

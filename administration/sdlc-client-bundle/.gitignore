@@ -2,3 +2,5 @@
 .vscode/
 .env*
 !.env.template
+visier_sdlc/deployment.json
+visier_sdlc/.databricks/

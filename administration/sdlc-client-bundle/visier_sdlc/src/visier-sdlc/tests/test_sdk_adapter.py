@@ -11,48 +11,39 @@ from promotion.ports import AppError
 from promotion.visier import VisierGateway
 
 
-def oauth_response(token):
-    return HTTPResponse(status=200, body=(
-        '{"access_token":"%s","refresh_token":"refresh-%s","id_token":"id-token",'
-        '"expires_in":3600,"token_type":"Bearer"}' % (token, token)).encode())
+def test_environment_credentials_exclude_removed_authentication(monkeypatch):
+    from promotion.credentials import EnvironmentCredentials
+
+    monkeypatch.setenv("SOURCE_HOST", "https://source.example.com")
+    monkeypatch.setenv("SOURCE_VANITY", "source")
+    monkeypatch.setenv("SOURCE_USERNAME", "user")
+    monkeypatch.setenv("SOURCE_PASSWORD", "password")
+    monkeypatch.delenv("SOURCE_TENANT_ID", raising=False)
+    for suffix in ("APIKEY", "CLIENT_ID", "CLIENT_SECRET", "ACCESS_TOKEN", "ASID_TOKEN"):
+        monkeypatch.setenv(f"SOURCE_{suffix}", "private-value")
+    assert EnvironmentCredentials().configuration("source") == {
+        "host": "https://source.example.com", "vanity": "source", "username": "user", "password": "password"}
 
 
-@pytest.mark.parametrize("key_config", [{}, {"api_key": None}, {"api_key": ""}, {"api_key": "configured-key"}],
-                         ids=["unset", "none", "blank", "configured"])
-@pytest.mark.parametrize("authentication", ["basic", "oauth"])
-def test_optional_api_key_with_sdk_authentication_and_refresh(monkeypatch, key_config, authentication):
-    def configuration(role):
-        config = dict(host=f"https://{role}.example.com", vanity=role,
-                      username="user", password="password", **key_config)
-        if authentication == "oauth":
-            config.update(client_id="client", client_secret="secret")
-        return config
+def test_basic_authentication_and_refresh_omit_api_key(monkeypatch):
+    credentials = SimpleNamespace(configuration=lambda role: dict(
+        host=f"https://{role}.example.com", vanity=role, username="user", password="password"))
 
-    def token_response(*args, **kwargs):
-        # Exercise the SDK's actual token exchange and verify it never passes an
-        # invalid None header to urllib3 when no API key was supplied.
-        assert all(isinstance(value, str) for value in kwargs["headers"].values())
-        if authentication == "oauth":
-            assert kwargs["headers"]["apikey"] == (key_config.get("api_key") or "")
-            return HTTPResponse(status=200, body=b'{"access_token":"access-token","refresh_token":"refresh-token","id_token":"id-token","expires_in":3600,"token_type":"Bearer"}')
+    def token_response(method, url, **kwargs):
+        assert url.endswith("/v1/admin/visierSecureToken")
+        assert "apikey" not in kwargs["headers"]
         return HTTPResponse(status=200, body=b"asid-token")
 
     token_request = Mock(side_effect=token_response)
     monkeypatch.setattr(sdk.configuration.http, "request", token_request)
-    gateway = VisierGateway(SimpleNamespace(configuration=configuration))
+    gateway = VisierGateway(credentials)
     for role, client in gateway.clients.items():
         def api_response(*args, **kwargs):
             headers = kwargs["headers"]
             assert "TargetTenantID" not in headers
-            if key_config.get("api_key"):
-                assert headers["apikey"] == key_config["api_key"]
-            else:
-                assert "apikey" not in headers
-            if authentication == "oauth":
-                assert headers["Authorization"] == "Bearer access-token"
-            else:
-                assert headers["Cookie"] == "VisierASIDToken=asid-token"
-            # Force one authentication refresh before returning version history.
+            assert "apikey" not in headers
+            assert "Authorization" not in headers
+            assert headers["Cookie"] == "VisierASIDToken=asid-token"
             status = 401 if api_request.call_count == 1 else 200
             return HTTPResponse(status=status, body=b'{"publishedVersions":[]}',
                                 headers={"Content-Type": "application/json"})
@@ -95,15 +86,12 @@ def test_repeated_unauthorized_preserves_diagnostics_without_secrets(monkeypatch
 
 
 @pytest.mark.parametrize("role", ["source", "target"])
-@pytest.mark.parametrize("authentication", ["basic", "oauth"])
-def test_unauthorized_retries_with_new_token_silently(monkeypatch, caplog, role, authentication):
+def test_unauthorized_retries_with_new_token_silently(monkeypatch, caplog, role):
     def configuration(role):
         config = dict(host=f"https://{role}.example.com", vanity=role, username="user", password="password")
-        if authentication == "oauth":
-            config.update(client_id="client", client_secret="secret")
         return config
 
-    tokens = [oauth_response(token) if authentication == "oauth" else HTTPResponse(status=200, body=token.encode())
+    tokens = [HTTPResponse(status=200, body=token.encode())
               for token in ("old-token", "new-token")]
     token_request = Mock(side_effect=tokens)
     monkeypatch.setattr(sdk.configuration.http, "request", token_request)
@@ -120,68 +108,11 @@ def test_unauthorized_retries_with_new_token_silently(monkeypatch, caplog, role,
 
     monkeypatch.setattr(gateway.clients[role].rest_client.pool_manager, "request", api_response)
     assert gateway.versions(role) == []
-    header, prefix = ("Authorization", "Bearer ") if authentication == "oauth" else ("Cookie", "VisierASIDToken=")
-    assert [request[header] for request in headers] == [prefix + "old-token", prefix + "new-token"]
+    assert [request["Cookie"] for request in headers] == ["VisierASIDToken=old-token", "VisierASIDToken=new-token"]
     assert token_request.call_count == 2
     rejected.close.assert_called_once()
     rejected.release_conn.assert_called_once()
     assert not caplog.records
-
-
-@pytest.mark.parametrize("trigger", ["expired", "unauthorized"])
-def test_expired_oauth_refresh_token_falls_back_to_login(monkeypatch, caplog, trigger):
-    from urllib.parse import parse_qs
-
-    credentials = SimpleNamespace(configuration=lambda role: dict(
-        host=f"https://{role}.example.com", vanity=role, username="user", password="password",
-        client_id="client", client_secret="secret"))
-    token_request = Mock(side_effect=[
-        oauth_response("old-token"),
-        HTTPResponse(status=400, body=b'{"error":"invalid_grant"}'),
-        oauth_response("new-token"),
-    ])
-    monkeypatch.setattr(sdk.configuration.http, "request", token_request)
-    gateway = VisierGateway(credentials)
-    headers = []
-
-    def api_response(*args, **kwargs):
-        headers.append(dict(kwargs["headers"]))
-        status = 401 if trigger == "unauthorized" and len(headers) == 2 else 200
-        return HTTPResponse(status=status, body=b'{"publishedVersions":[]}')
-
-    client = gateway.clients["source"]
-    monkeypatch.setattr(client.rest_client.pool_manager, "request", api_response)
-    assert gateway.versions("source") == []
-    if trigger == "expired":
-        client.configuration._token_acquired_at -= client.configuration.token_expiration_secs + 1
-    assert gateway.versions("source") == []
-    assert headers[-1]["Authorization"] == "Bearer new-token"
-    assert [parse_qs(call.kwargs["body"])["grant_type"] for call in token_request.call_args_list] == [
-        ["password"], ["refresh_token"], ["password"]]
-    assert not caplog.records
-
-
-@pytest.mark.parametrize("status,body", [
-    (400, b'{"error":"invalid_client"}'),
-    (403, b'{"error":"invalid_grant"}'),
-    (500, b'{"error":"invalid_grant"}'),
-])
-def test_other_oauth_refresh_failures_do_not_trigger_login(monkeypatch, status, body):
-    credentials = SimpleNamespace(configuration=lambda role: dict(
-        host=f"https://{role}.example.com", vanity=role, username="user", password="password",
-        client_id="client", client_secret="secret"))
-    token_request = Mock(side_effect=[oauth_response("old-token"), HTTPResponse(status=status, body=body)])
-    monkeypatch.setattr(sdk.configuration.http, "request", token_request)
-    gateway = VisierGateway(credentials)
-    client = gateway.clients["source"]
-    api_request = Mock(return_value=HTTPResponse(status=200, body=b'{"publishedVersions":[]}'))
-    monkeypatch.setattr(client.rest_client.pool_manager, "request", api_request)
-    assert gateway.versions("source") == []
-    client.configuration._token_acquired_at -= client.configuration.token_expiration_secs + 1
-    with pytest.raises(AppError, match=f"authentication token request failed.*HTTP {status}"):
-        gateway.versions("source")
-    assert token_request.call_count == 2
-    api_request.assert_called_once()
 
 
 @pytest.mark.parametrize("wrapped", [False, True])
@@ -326,40 +257,26 @@ def test_token_request_403_logs_edge_headers(monkeypatch, caplog):
     assert "private-" not in logged and "private-page-text" not in logged
 
 
-@pytest.mark.parametrize("token_field, header, value", [
-    ("access_token", "Authorization", "Bearer supplied-token"),
-    ("asid_token", "Cookie", "VisierASIDToken=supplied-token"),
-])
-def test_supplied_tokens_work_without_username_password(monkeypatch, token_field, header, value):
+@pytest.mark.parametrize("field", ["api_key", "client_id", "client_secret", "access_token", "asid_token",
+                                   "refresh_token", "redirect_uri", "scope"])
+def test_unsupported_authentication_is_rejected_before_login(monkeypatch, field):
     credentials = SimpleNamespace(configuration=lambda role: dict(
-        host=f"https://{role}.example.com", vanity=role, **{token_field: "supplied-token"}))
-    token_request = Mock(side_effect=AssertionError("Supplied tokens must not trigger a login"))
+        host=f"https://{role}.example.com", vanity=role, username="user", password="password",
+        **{field: "private-value"}))
+    token_request = Mock()
     monkeypatch.setattr(sdk.configuration.http, "request", token_request)
-    gateway = VisierGateway(credentials)
-
-    def api_response(*args, **kwargs):
-        assert kwargs["headers"][header] == value
-        assert "TargetTenantID" not in kwargs["headers"]
-        return HTTPResponse(status=200, body=b'{"publishedVersions":[]}',
-                            headers={"Content-Type": "application/json"})
-
-    monkeypatch.setattr(gateway.clients["source"].rest_client.pool_manager, "request", api_response)
-    assert gateway.versions("source") == []
+    with pytest.raises(ValueError, match=f"Unsupported source credential fields: {field}") as caught:
+        VisierGateway(credentials)
+    assert "private-value" not in str(caught.value)
     token_request.assert_not_called()
 
 
-def test_expired_supplied_token_fails_without_retrying_login(monkeypatch):
-    credentials = SimpleNamespace(configuration=lambda role: dict(
-        host=f"https://{role}.example.com", vanity=role, access_token="expired-token"))
-    token_request = Mock(side_effect=AssertionError("Token-only configurations cannot log in"))
-    monkeypatch.setattr(sdk.configuration.http, "request", token_request)
-    gateway = VisierGateway(credentials)
-    api_request = Mock(return_value=HTTPResponse(status=401, body=b'{"code":"VSE_AUTHENTICATION_INVALID_TOKEN"}'))
-    monkeypatch.setattr(gateway.clients["source"].rest_client.pool_manager, "request", api_request)
-    with pytest.raises(AppError, match="HTTP 401"):
-        gateway.versions("source")
-    api_request.assert_called_once()
-    token_request.assert_not_called()
+@pytest.mark.parametrize("missing", ["username", "password"])
+def test_basic_authentication_requires_username_and_password(missing):
+    config = dict(host="https://source.example.com", vanity="source", username="user", password="password")
+    del config[missing]
+    with pytest.raises(ValueError, match="SOURCE_USERNAME and SOURCE_PASSWORD"):
+        VisierGateway(SimpleNamespace(configuration=lambda role: config))
 
 
 @pytest.fixture

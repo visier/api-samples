@@ -1,0 +1,14 @@
+command: [gunicorn, "wsgi:app", --bind, "0.0.0.0:8000", --workers, "1", --threads, "8", --timeout, "300"]
+env:
+  - name: APP_MODE
+    value: live
+  - name: SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: PROMOTION_STATE_TABLE_FULL_NAME
+    valueFrom: promotion-state
+  - name: VISIER_SECRET_PREFIX
+    value: visier-sdlc-
+  - name: SOURCE_NAME
+    value: Development
+  - name: TARGET_NAME
+    value: Production

@@ -25,13 +25,13 @@ The app follows [Visier’s website](https://www.visier.com/) with a mid-tone cr
 ## Live tenant setup
 
 1. Set `APP_MODE=live` in `.env`.
-2. Configure `SOURCE_*` and `TARGET_*` values from `.env.example`. Provide each tenant's host, vanity, and username/password, or an access/ASID token. `SOURCE_APIKEY` and `TARGET_APIKEY` are optional; leave them blank or unset when your server does not require an API key. The SDK also accepts client ID and client secret with username/password for two-legged OAuth. Set `TARGET_CLIENT_ID` and `TARGET_CLIENT_SECRET` for the target if applicable. Configure target-tenant IDs when operating through an administrating tenant.
+2. Configure each tenant's host, vanity, username, and password using `SOURCE_*` and `TARGET_*` values from `.env.example`. Visier authentication supports username/password only. Configure target-tenant IDs when operating through an administrating tenant.
 3. Start without `INITIAL_SOURCE_VERSION_ID` and `INITIAL_TARGET_VERSION_ID` to choose a verified source and target pair using **Reset sync baseline** in the app. Promotion to an existing production tenant stays blocked until both baselines are set. Alternatively, set both environment values to seed a missing checkpoint once; they do not overwrite subsequent syncs. Never choose unrelated versions merely to enable sync. An empty production tenant can receive a first sync without a baseline.
-4. Restart the server. Use **Connections** to see the active mode, tenant names, tenant vanity, API base URI, and API username for each environment. Both environments also show **Authentication method: Basic Authentication** as a fixed display value. Missing settings show **Not configured**; demo environments show **Not applicable (demo)**. Passwords, API keys, client secrets, and tokens are never returned to the browser or saved in the state store.
+4. Restart the server. Use **Connections** to see the active mode, tenant names, tenant vanity, API base URI, and API username for each environment. Both environments also show **Authentication method: Basic Authentication** as a fixed display value. Missing settings show **Not configured**; demo environments show **Not applicable (demo)**. Passwords and session tokens are never returned to the browser or saved in the state store.
 
 `SOURCE_TENANT_ID` and `TARGET_TENANT_ID` override the tenant for API calls using the `TargetTenantID` header. Leave them blank when payload calls target the administrating tenant you logged into; the header is omitted. Set an override only when addressing a different managed tenant through that login, using its actual tenant ID, **not its vanity name**. A successful token request followed by `HTTP 401; code=VSE_AUTHENTICATION_INVALID_TOKEN` can indicate an incorrect override. Authentication errors identify the source/target, token request or API endpoint, HTTP status, and available Visier error code/correlation ID in the browser and server log. Raw response bodies, credential values, and headers are excluded.
 
-With username/password configured, expired sessions renew silently through the SDK. An API request rejected with HTTP 401 is retried once with renewed authentication; an OAuth refresh token rejected with `invalid_grant` falls back to a fresh login. GET/HEAD requests also retry once after a dropped connection, renewing authentication when credentials are available. These recoveries share a limit of two API attempts per request. Writes are never replayed after a connection failure because they may already have taken effect. Persistent failures are reported normally. Supplied access/ASID tokens without username/password cannot log in again automatically; replace them when they expire.
+The SDK obtains and renews session tokens internally using the configured username/password. An API request rejected with HTTP 401 is retried once with renewed authentication. GET/HEAD requests also retry once after a dropped connection, renewing authentication first. These recoveries share a limit of two API attempts per request. Writes are never replayed after a connection failure because they may already have taken effect. Persistent failures are reported normally.
 
 Live mode has no demo mutation controls. SDK methods and real SDK DTO serialization are covered by tests. Read-only live authentication and version-history checks have passed for both configured tenants; validation has not modified either tenant. The version tables show each version’s description, ID, and `versionNumber` (normalized as `number` in the app API). When Visier omits `versionNumber`, its column displays “—”. Owner and publish-date columns are omitted because the production-version API does not provide those fields.
 
@@ -135,46 +135,74 @@ Inject `store`, `credentials`, and/or `gateway` into `create_app()` to replace i
 
 The bundle supplies `VISIER_SECRETS_CATALOG` from `catalog_name`, `VISIER_SECRETS_SCHEMA` from `schema_name`, and `PROMOTION_STATE_TABLE` from `state_table_name`. Set the table to an unqualified name such as `promotion_state`; the app composes `catalog.schema.promotion_state` using those catalog and schema values. The manual provisioning script uses the same settings. Each component must be a simple identifier (letters, digits, or underscores, starting with a letter or underscore).
 
-Tenant credentials are Unity Catalog secrets in `catalog_name.schema_name`, named `{secret_prefix}{source|target}-{field}` (for example `visier-sdlc-source-host`). `host` is required for each role; the other fields depend on the auth method: `vanity`, `username`, `password` (basic), `access-token` or `asid-token` (token), and optionally `api-key`, `tenant-id`, `client-id`, `client-secret`. The app reads them at startup with its service principal through the SDK (`UnityCatalogSecretsCredentials`), because Apps resources cannot reference Unity Catalog secrets. It is configured by `VISIER_SECRETS_CATALOG`, `VISIER_SECRETS_SCHEMA` and `VISIER_SECRET_PREFIX`, all supplied by the bundle. The Spark example (`examples/databricks_bootstrap.py`) takes a `get_secret` callable you provide and is independent of this.
+Tenant credentials are Unity Catalog secrets in `catalog_name.schema_name`, named `{secret_prefix}{source|target}-{field}` (for example `visier-sdlc-source-host`). The deployment provisions four fields per tenant: `host`, `vanity`, `username`, and `password`. The app reads them at startup with its service principal through the SDK (`UnityCatalogSecretsCredentials`), because Apps resources cannot reference Unity Catalog secrets. It is configured by `VISIER_SECRETS_CATALOG`, `VISIER_SECRETS_SCHEMA` and `VISIER_SECRET_PREFIX`, all supplied by the bundle. The Spark example (`examples/databricks_bootstrap.py`) takes a `get_secret` callable you provide and is independent of this.
 
 ### Initialize and deploy
 
-One-time setup: authenticate with `databricks auth login`, then supply the bundle variables (`BUNDLE_VAR_*`) using one of the two options below. The secrets step runs locally and uses the Databricks SDK, so its requirements must be installed. Run all bundle commands from `visier_sdlc/`, where `databricks.yml` lives.
+Choose one of the two routes below. The CLI route requires a local checkout, the Databricks CLI, and Python dependencies. The Apps UI route can be completed in the browser after an administrator provisions the table and tenant secrets. Run bundle commands from `visier_sdlc/`, where `databricks.yml` lives.
 
-**Option 1: `.env` file with `dotenv run`**
+**Deployment values and defaults**
 
-1. Copy the template and provide the actual values:
+`deployment.template.json` lists the bundle variable names without the environment-only `BUNDLE_VAR_` prefix. Catalog, schema, warehouse ID, app name, and all eight tenant values are empty inputs. The only populated defaults are `secret_prefix`, `state_table_name`, and the `source_name` / `target_name` UI labels (Development / Production). The catalog and schema must already exist. Secret names and the qualified table name are derived internally from these values.
 
-   ```sh
-   cp .env.template .env
-   ```
+**Two supported deployment routes**
 
-   Edit `.env` and replace each empty value. `.env` is git-ignored, but it contains passwords, so keep it local.
+Use either local CLI deployment or direct deployment from Git in Databricks Apps. Uploading application files through the workspace UI and using the workspace bundle editor are outside the documented deployment paths.
 
-2. Set up a virtual environment, install the requirements, and activate it:
+| | Local CLI (bundle) | Apps: Deploy from Git |
+| --- | --- | --- |
+| Source location | The bundle is rooted at `visier_sdlc/` | Set Source code path to `visier_sdlc/src/visier-sdlc` |
+| Configuration | `databricks.yml`, bundle variables, and app resource configuration | The app's `app.yaml` plus resource selections in the Apps UI |
+| Deployment values | Choose a JSON settings file or `BUNDLE_VAR_*` environment variables | Select resources in Apps and provision secrets in Catalog Explorer; bundle variable files are not read |
+| Table and warehouse | Defined as bundle app resources | Create/select existing resources, then attach them to the app |
+| Tenant secrets | `setup_secrets` provisions and grants UC secrets | An administrator creates UC secrets and grants access in Catalog Explorer |
+| Start/update code | `databricks bundle run visier_sdlc_app` | Deploy the selected Git branch, tag, or commit in Apps |
 
-   ```sh
-   cd src/visier-sdlc
-   python3 -m venv .venv
-   source .venv/bin/activate            # Windows: .venv\Scripts\activate
-   python -m pip install -r requirements.txt
-   cd ../..
-   ```
+**1. Local CLI deployment**
 
-3. Prefix each Databricks CLI bundle command with `dotenv run --`, for example:
+Clone the repository locally, authenticate with `databricks auth login --profile <profile>`, and set `DATABRICKS_CONFIG_PROFILE` to that profile. From `visier_sdlc/`, install the Python requirements in an active virtual environment; this is required for both configuration options:
 
-   ```sh
-   dotenv run -- databricks bundle deploy
-   dotenv run -- databricks bundle run sql_setup_job
-   ```
+```sh
+cd src/visier-sdlc
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
+cd ../..
+```
 
-**Option 2: export the variables into the shell**
+Then choose **one of two ways to provide deployment values**:
 
-Export the same variables in your shell, then run the Databricks CLI commands directly, without `dotenv`. Use the syntax for your OS.
+| Option | How to supply values | Variable names |
+| --- | --- | --- |
+| **A. JSON settings file** | Copy `deployment.template.json` to `.databricks/bundle/default/variable-overrides.json` and fill in the copy | `catalog_name`, `schema_name`, etc. |
+| **B. Environment variables** | Set values in the environment from which you run deployment, directly or through `.env` | `BUNDLE_VAR_catalog_name`, `BUNDLE_VAR_schema_name`, etc. |
+
+Both options configure the same bundle variables and use the same deployment script. You do not need to create a JSON settings file when using environment variables.
+
+**Option A: JSON settings file**
+
+Keep `deployment.template.json` as an empty, copyable template. Databricks bundle commands read `.databricks/bundle/default/variable-overrides.json` for this bundle's `default` target. To use a JSON values file, copy the template to that exact path, then edit the copy:
+
+```sh
+mkdir -p .databricks/bundle/default
+cp deployment.template.json .databricks/bundle/default/variable-overrides.json
+chmod 600 .databricks/bundle/default/variable-overrides.json
+```
+
+Only run the copy command for first-time setup: it overwrites an existing values file. Fill in the empty inputs in the copy and keep the committed template empty. The file contains passwords; `.databricks/` is git-ignored, and it must remain private. No generator or intermediate `deployment.json` is needed. A file named `deployment.json` is not automatically read by either route.
+
+The JSON keys are bundle variable names without the environment-only `BUNDLE_VAR_` prefix. Environment variables and `--var` flags take precedence over the native file. Use the same target and configuration for deployment and subsequent run commands. The environment option below does not require this file.
+
+**Option B: environment variables**
+
+Set the `BUNDLE_VAR_*` values in the shell from which you will deploy. No JSON settings file is required. Use the syntax for your OS:
 
 macOS or Linux (bash or zsh):
 
 ```sh
+export BUNDLE_VAR_catalog_name=<catalog>
+export BUNDLE_VAR_schema_name=<schema>
+export BUNDLE_VAR_app_name=<app-name>
 export BUNDLE_VAR_warehouse_id=<id>
 export BUNDLE_VAR_secret_source_host=https://...
 export BUNDLE_VAR_secret_source_vanity=...
@@ -194,20 +222,71 @@ $env:BUNDLE_VAR_secret_source_host = "https://..."
 # ...set the remaining BUNDLE_VAR_* values the same way
 ```
 
-Remember that the Python environment for the secrets step still needs `pip install -r src/visier-sdlc/requirements.txt` in an active virtual environment, as in Option 1.
+Alternatively, copy `.env.template` to `.env` and fill in its `BUNDLE_VAR_*` entries:
 
-The bundle manages only these four fields per role. The app also reads other fields (`api-key`, `tenant-id`, `client-id`, `client-secret`, `access-token`, `asid-token`) when a secret with that name exists; if you need one, create it yourself with `databricks secrets-uc create-secret`, and `setup_secrets` will grant access to it too. Then:
+```sh
+cp .env.template .env
+```
 
-1. `databricks bundle deploy` creates the app and its service principal; the app's `promotion-state` resource grants it `MODIFY` on the state table.
-2. `databricks bundle run sql_setup_job` creates the state table.
-3. `databricks bundle run setup_secrets` creates or updates the secrets from the `secret_*` variables, then grants the app's service principal `READ_SECRET` on every `{secret_prefix}*` secret, plus `USE CATALOG` and `USE SCHEMA`. A failed `USE CATALOG` grant only prints a warning (many workspaces grant it implicitly to all account users); a failed `USE SCHEMA` or `READ_SECRET` grant is an error. It is a local script (`scripts:` in `resources/secrets.yml`, running `scripts/setup_secrets.py`) because bundles have no native Unity Catalog secret resource, and running it locally means secret values never enter the bundle or a deployed job. An empty variable leaves the existing secret untouched, so you can rerun it to rotate one value or to re-grant after adding secrets. It fails if the `source-host` or `target-host` secret does not exist afterwards. You need `CREATE_SECRET` on the schema (and `MANAGE` on existing secrets).
+Keep `.env` local; it is git-ignored and contains passwords. Use `dotenv run --` to load these values into the deployment command's environment.
+
+**Deploy with the selected values**
+
+From `visier_sdlc/`, with the Python environment still active, run:
+
+```sh
+./deploy.sh
+# If using .env to supply BUNDLE_VAR_* values:
+# dotenv run -- ./deploy.sh
+```
+
+The script validates the bundle, creates the state table, deploys the app resources, provisions secrets and grants access, then starts the app. Check the app's status and logs after starting it. The CLI synchronizes source files to Databricks as part of deployment; customers do not need to upload files manually.
+
+**2. Direct deployment from Git**
+
+This route fetches the app source directly from GitHub (or another supported Git provider). It does not read the JSON template or a populated deployment values file, and it does not run `databricks.yml`, `deploy.sh`, or the setup scripts. An administrator must provision the table and secrets before the first successful app start. No local checkout is required when following these browser-based steps:
+
+1. In the SQL editor, create the state table in your chosen catalog and schema using the structure in `deploy-assets/databricks/state-table.sql` (view the file in GitHub and replace the example catalog/schema/table names). The catalog and schema must already exist. Select a SQL warehouse that can query the table.
+2. In **Databricks Apps**, create a custom app and configure its Git repository. For a private repository, configure the app service principal's Git credential. Note the app's service principal identity from the app details; it will receive access to the secrets.
+3. In the app's resource settings, attach the SQL warehouse under the exact resource key **`sql-warehouse`**, with **Can use**, and the state table under **`promotion-state`**, with **Can select and modify**. The table's full name is supplied to the runtime, which derives the catalog and schema used for tenant secrets. Do not enter them again in `app.yaml`.
+4. In **Catalog Explorer**, open that same catalog and schema. Use **Create → Secret** to create the eight Databricks-managed secrets below, entering each tenant's actual value:
+
+   | Source secret | Target secret | Value |
+   | --- | --- | --- |
+   | `visier-sdlc-source-host` | `visier-sdlc-target-host` | Tenant API host URL |
+   | `visier-sdlc-source-vanity` | `visier-sdlc-target-vanity` | Tenant vanity |
+   | `visier-sdlc-source-username` | `visier-sdlc-target-username` | API username |
+   | `visier-sdlc-source-password` | `visier-sdlc-target-password` | API password |
+
+   These names use the committed `app.yaml` prefix, `visier-sdlc-`. Open each secret's **Permissions → Grant** and grant the app's service principal **READ SECRET**. Ensure it also has **USE CATALOG** and **USE SCHEMA** on the parents, and **SELECT** and **MODIFY** on the attached state table. Adding the table resource normally establishes the table and parent privileges. Creating secrets requires **CREATE SECRET** on the schema (or ownership); granting access requires ownership or **MANAGE**. Do not put the secret values in GitHub or `app.yaml`.
+5. In Apps, choose **Deploy → From Git**, select the branch, tag, or commit, set **Source code path** to `visier_sdlc/src/visier-sdlc`, and deploy. Check the app's status and logs. For later code changes, redeploy from Git. After changing secrets, restart or redeploy the app so it reloads the values.
+
+**Optional scripted provisioning:** Administrators who already use the CLI can automate step 4 instead. Clone the repository locally (or into a workspace Git folder accessible from a web terminal), install the Python requirements using the CLI setup instructions above, and authenticate to the intended workspace. For a local named profile, set `DATABRICKS_CONFIG_PROFILE=<profile>` after `databricks auth login --profile <profile>`. From the checkout's `visier_sdlc/` directory, populate `.env` from `.env.template` with the same catalog, schema, app name, table name, prefix, and eight tenant values, then run:
+
+```sh
+dotenv run -- python3 src/visier-sdlc/scripts/setup_secrets.py
+```
+
+This creates/updates the supported tenant secrets and grants the app access to them and the state table; it does not deploy a bundle or start the app. If both a script input (such as `CATALOG`, `TABLE`, or `SECRET_SOURCE_PASSWORD`) and its `BUNDLE_VAR_*` equivalent are present, their values must match, including empty values. Conflicts fail before connecting to Databricks, and credential values are never included in the error.
+
+The committed `app.yaml` contains only resource keys and application defaults: `visier-sdlc-`, Development, and Production. Direct Git deployment uses those defaults. For custom labels or a different prefix in this route, change those three application defaults in `app.yaml` on a customer-controlled branch/fork, and use the same prefix during secret provisioning. The bundle route instead supplies them as variables without changing source. Do not put credential values, catalog/schema names, warehouse IDs, or app names in `app.yaml`. This is the main configuration difference between the routes; a local JSON file cannot alter code fetched directly from Git by the Apps UI.
+
+Choose one route to manage each app. Switching an existing app between bundle ownership and UI-managed resources requires reconciling its configuration; a later bundle deployment can reapply bundle settings.
+
+References: [Databricks variable files and precedence](https://docs.databricks.com/aws/en/dev-tools/bundles/variables), [Unity Catalog secret creation and permissions](https://docs.databricks.com/aws/en/security/secrets/unity-catalog-secrets), [web terminal authentication](https://docs.databricks.com/aws/en/compute/web-terminal), [Apps deployment from Git](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/deploy), and [app resource environment values](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/environment-variables).
+
+The bundle provisions the four tenant fields per role listed in the JSON template. The app also supports an optional `{secret_prefix}{source|target}-tenant-id` secret for managed-tenant access; create it separately if needed. `setup_secrets` grants access only to these supported tenant fields. Old API-key, OAuth, or directly supplied token secrets are not read or newly granted access. Existing grants are not revoked; remove obsolete credentials and grants separately. The deployment sequence is:
+
+1. `databricks bundle run setup_table` creates the state table before app resource registration, using the SQL warehouse as the deploying user. The catalog and schema must already exist; the deploying user needs permission to create the table.
+2. `databricks bundle deploy` creates the app and its service principal; the app's `promotion-state` resource grants it `MODIFY` on the existing state table.
+3. `databricks bundle run setup_secrets` creates or updates the secrets from the `secret_*` variables, then grants the app's service principal `READ_SECRET` on the supported prefixed tenant secrets, plus `USE CATALOG` and `USE SCHEMA`. A failed `USE CATALOG` grant only prints a warning (many workspaces grant it implicitly to all account users); a failed `USE SCHEMA` or `READ_SECRET` grant is an error. It is a local script (`scripts:` in `resources/secrets.yml`, running `scripts/setup_secrets.py`) because bundles have no native Unity Catalog secret resource, and running it locally means secret values never enter the bundle or a deployed job. An empty variable leaves the existing secret untouched, so you can rerun it to rotate one value or to re-grant after adding secrets. It fails if the `source-host` or `target-host` secret does not exist afterwards. It also grants `SELECT` and `MODIFY` on the state table. You need `CREATE_SECRET` on the schema (and `MANAGE` on existing secrets), plus permission to grant access to the table.
 4. `databricks bundle run visier_sdlc_app` starts (or restarts) the app. It initializes its state row and fails at startup if the table or a required secret is missing.
 
 Secret variables default to empty rather than being prompted for: the CLI resolves every variable for every command, so required variables would prompt for passwords on each `deploy`. Values passed with `--var`, or typed at a prompt, may be recorded in shell history or logs, which is another reason to prefer `BUNDLE_VAR_*` from a secrets manager. After changing secrets, restart the app.
 
-The service principal also needs `SELECT` on the state table for reads; the `MODIFY` resource grant may not imply it, so grant it yourself if the app reports a permission error. The grants call uses the REST permissions API with the `secret` securable type, which the SDK enums lack; it has not been run against a workspace.
+The setup script grants both `SELECT` and `MODIFY` on the state table because the app needs reads as well as writes. The grants call uses the REST permissions API with the `secret` securable type, which the SDK enums lack; it has not been run against a workspace.
 
-Provision a Delta table before launching replicas (the bundle's `sql_setup_job` does this):
+Provision a Delta table before launching replicas (the bundle's `setup_table` script does this; `sql_setup_job` remains available to rerun the same idempotent SQL as a job):
 
 ```sql
 CREATE TABLE catalog.schema.promotion_state (

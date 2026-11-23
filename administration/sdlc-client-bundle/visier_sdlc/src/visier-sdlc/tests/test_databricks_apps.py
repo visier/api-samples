@@ -7,7 +7,7 @@ import pytest
 from databricks.sdk.errors import NotFound
 from databricks.sdk.service.sql import ResultData, StatementResponse, StatementState, StatementStatus
 
-from promotion.databricks_apps import SqlWarehouseStateStore, UnityCatalogSecretsCredentials
+from promotion.databricks_apps import SqlWarehouseStateStore, UnityCatalogSecretsCredentials, state_location
 from promotion.ports import AppError
 
 PAIR = "live:test-pair"
@@ -67,7 +67,7 @@ def test_credentials_use_prefixed_uc_names_and_skip_missing_optional_secrets():
     config = credentials.configuration("source")
 
     assert config == {"host": "https://dev.example", "username": "user", "password": "pw"}
-    assert "my_catalog.my_schema.sdlc-demo-source-api-key" in secrets.requested
+    assert "my_catalog.my_schema.sdlc-demo-source-tenant-id" in secrets.requested
 
 
 def test_missing_host_secret_is_a_clear_startup_error():
@@ -87,10 +87,13 @@ def test_invalid_secret_prefix_is_rejected():
         UnityCatalogSecretsCredentials(_workspace(), catalog="my_catalog", schema="my_schema", prefix="bad.prefix-")
 
 
-def test_token_secrets_are_read_when_present():
-    secrets = FakeSecrets({"my_catalog.my_schema.p-source-host": "h", "my_catalog.my_schema.p-source-access-token": "t"})
+def test_removed_authentication_secrets_are_not_read():
+    removed = ("api-key", "client-id", "client-secret", "access-token", "asid-token")
+    secrets = FakeSecrets({"my_catalog.my_schema.p-source-host": "h", **{
+        f"my_catalog.my_schema.p-source-{field}": "private-value" for field in removed}})
     config = UnityCatalogSecretsCredentials(_workspace(secrets), catalog="my_catalog", schema="my_schema", prefix="p-").configuration("source")
-    assert config == {"host": "h", "access_token": "t"}
+    assert config == {"host": "h"}
+    assert not any(name.endswith(field) for name in secrets.requested for field in removed)
 
 
 def test_table_name_must_be_three_part_identifier():
@@ -163,7 +166,8 @@ def test_duplicate_state_rows_are_rejected_at_startup():
         store.provision()
 
 
-def test_databricks_startup_with_empty_table_requires_baselines_and_preserves_them(monkeypatch):
+@pytest.mark.parametrize("route", ["bundle", "direct-git"])
+def test_databricks_startup_with_empty_table_requires_baselines_and_preserves_them(monkeypatch, route):
     import app
     import databricks.sdk
 
@@ -180,6 +184,11 @@ def test_databricks_startup_with_empty_table_requires_baselines_and_preserves_th
     monkeypatch.setenv("VISIER_SECRET_PREFIX", "")
     monkeypatch.setenv("SQL_WAREHOUSE_ID", "wh")
     monkeypatch.setenv("PROMOTION_STATE_TABLE", "promotion_state")
+    monkeypatch.delenv("PROMOTION_STATE_TABLE_FULL_NAME", raising=False)
+    if route == "direct-git":
+        monkeypatch.setenv("PROMOTION_STATE_TABLE_FULL_NAME", TABLE)
+        for key in ("VISIER_SECRETS_CATALOG", "VISIER_SECRETS_SCHEMA", "PROMOTION_STATE_TABLE"):
+            monkeypatch.delenv(key)
     monkeypatch.delenv("INITIAL_SOURCE_VERSION_ID", raising=False)
     monkeypatch.delenv("INITIAL_TARGET_VERSION_ID", raising=False)
 
@@ -224,6 +233,19 @@ def test_databricks_startup_with_empty_table_requires_baselines_and_preserves_th
     assert changed.get("/api/state").json["checkpoint"] is None
     assert len(statements.rows) == 2
     assert all(statements.rows[key] == value for key, value in saved.items())
+
+
+@pytest.mark.parametrize("extra", [{"VISIER_SECRETS_CATALOG": "wrong"},
+                                  {"VISIER_SECRETS_SCHEMA": "wrong"},
+                                  {"PROMOTION_STATE_TABLE": "wrong"}])
+def test_attached_table_rejects_conflicting_explicit_settings(extra):
+    with pytest.raises(ValueError, match="conflicts"):
+        state_location({"PROMOTION_STATE_TABLE_FULL_NAME": TABLE, **extra})
+
+
+def test_attached_table_must_be_qualified_and_safe():
+    with pytest.raises(ValueError, match="catalog.schema.table"):
+        state_location({"PROMOTION_STATE_TABLE_FULL_NAME": "cat.sch.table; DROP TABLE other"})
 
 
 def test_stale_revision_is_rejected_without_overwriting_newer_state():

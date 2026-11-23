@@ -6,6 +6,7 @@ include:
 
 sync:
   exclude:
+    - deployment.json
     - src/visier-sdlc/tests/**
     - src/visier-sdlc/.env*
     - src/visier-sdlc/pytest.ini
@@ -17,10 +18,8 @@ sync:
 variables:
   catalog_name:
     description: "Target Unity Catalog"
-    default: "main"
   schema_name:
     description: "Target Schema"
-    default: "app_schema"
   warehouse_id:
     description: "SQL Warehouse ID (required: pass --var warehouse_id=<id>)"
   secret_prefix:
@@ -28,7 +27,12 @@ variables:
     default: "visier-sdlc-"
   app_name:
     description: "Databricks App name"
-    default: "visier-sdlc"
+  source_name:
+    description: "Source tenant label in the application"
+    default: "Development"
+  target_name:
+    description: "Target tenant label in the application"
+    default: "Production"
   state_table_name:
     description: "Unqualified promotion state table name in catalog_name.schema_name"
     default: "promotion_state"

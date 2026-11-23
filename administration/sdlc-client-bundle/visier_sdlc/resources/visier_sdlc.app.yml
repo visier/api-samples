@@ -19,14 +19,16 @@ resources:
       # ${var.catalog_name}.${var.schema_name}:
       #   ${var.secret_prefix}source-host   ${var.secret_prefix}target-host      (required)
       #   ${var.secret_prefix}{source,target}-{vanity,username,password}        (basic auth)
-      #   ${var.secret_prefix}{source,target}-{access-token,asid-token}         (token auth)
-      #   ${var.secret_prefix}{source,target}-{api-key,tenant-id,client-id,client-secret}  (optional)
       # `databricks bundle run setup_secrets` (databricks.yml `scripts`) creates them from the
       # secret_* bundle variables and grants the service principal READ_SECRET on each.
       config:
         command: ["gunicorn", "wsgi:app", "--bind", "0.0.0.0:8000",
                   "--workers", "1", "--threads", "8", "--timeout", "300"]
         env:
+          - name: SOURCE_NAME
+            value: ${var.source_name}
+          - name: TARGET_NAME
+            value: ${var.target_name}
           - name: APP_MODE
             value: live
           - name: VISIER_SECRETS_CATALOG

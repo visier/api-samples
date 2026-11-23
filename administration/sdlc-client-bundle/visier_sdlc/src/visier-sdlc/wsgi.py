@@ -18,19 +18,18 @@ def build_app():
 
     from databricks.sdk import WorkspaceClient
 
-    from promotion.databricks_apps import SqlWarehouseStateStore, UnityCatalogSecretsCredentials
-    from promotion.storage import qualified_table_name
+    from promotion.databricks_apps import SqlWarehouseStateStore, UnityCatalogSecretsCredentials, state_location
 
     # Send promotion diagnostics (for example Visier HTTP failures) to stderr, which Databricks Apps collects.
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     workspace = WorkspaceClient()  # Inside an App, authenticates as the app's service principal.
+    catalog, schema, table = state_location(os.environ)
     credentials = UnityCatalogSecretsCredentials(
         workspace,
-        catalog=os.environ["VISIER_SECRETS_CATALOG"],
-        schema=os.environ["VISIER_SECRETS_SCHEMA"],
+        catalog=catalog,
+        schema=schema,
         prefix=os.getenv("VISIER_SECRET_PREFIX", ""),
     )
-    table = qualified_table_name(credentials.catalog, credentials.schema, os.environ["PROMOTION_STATE_TABLE"])
     store = SqlWarehouseStateStore(workspace, os.environ["SQL_WAREHOUSE_ID"], table, tenant_pair_key(credentials))
     store.provision()  # An empty state requires verified baselines in the app for an existing target.
     return create_app({"APP_MODE": "live"}, store=store, credentials=credentials)

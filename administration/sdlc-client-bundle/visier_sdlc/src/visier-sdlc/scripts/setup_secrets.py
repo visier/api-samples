@@ -8,10 +8,10 @@ environment or an interactive prompt):
 Secret values travel only from your environment to Unity Catalog; they are never put in the bundle
 or in a deployed job. Secrets are named {prefix}{source|target}-{field} (underscores become
 hyphens). A non-empty value creates the secret or updates it; an empty value leaves any existing
-secret untouched. Afterwards every secret in catalog.schema starting with the prefix is granted
+secret untouched. Afterwards the supported tenant secrets in catalog.schema with the prefix are granted
 READ_SECRET for the app's service principal (looked up from the deployed app), plus USE CATALOG /
-USE SCHEMA on the parents. Everything is idempotent. Run `databricks bundle deploy` first so the
-app and its service principal exist.
+USE SCHEMA on the parents. Everything is idempotent. Create the app first (through the bundle or Apps UI) so its service principal exists.
+The state table must also exist; the script grants SELECT and MODIFY on it.
 """
 import os
 import re
@@ -60,9 +60,10 @@ def _grant(workspace, securable_type, full_name, principal, privileges):
 
 
 def grant_secret_access(workspace, catalog, schema, prefix, principal):
+    supported = {f"{prefix}{role}-{field}" for role in ROLES for field in (*FIELDS, "tenant-id")}
     names = sorted(
         s.name for s in workspace.secrets_uc.list_secrets(catalog_name=catalog, schema_name=schema)
-        if s.name.startswith(prefix)
+        if s.name in supported
     )
     missing = [prefix + r for r in REQUIRED if prefix + r not in names]
     if missing:
@@ -81,7 +82,26 @@ def grant_secret_access(workspace, catalog, schema, prefix, principal):
 
 def main(env=None):
     env = os.environ if env is None else env
+    # The bundle passes script variables; standalone UI-app setup can use the
+    # same BUNDLE_VAR_* inputs used by CLI deployment, without deploying a bundle.
+    inputs = {"CATALOG": "catalog_name", "SCHEMA": "schema_name", "PREFIX": "secret_prefix",
+              "APP_NAME": "app_name", "TABLE": "state_table_name"}
+    inputs.update({f"SECRET_{role}_{field}".upper(): f"secret_{role}_{field}"
+                   for role in ROLES for field in FIELDS})
+    env = dict(env)
+    for name, variable in inputs.items():
+        bundle_name = f"BUNDLE_VAR_{variable}"
+        if bundle_name not in env:
+            continue
+        if name in env and env[name] != env[bundle_name]:
+            raise ValueError(f"Conflicting values for {name} and {bundle_name}")
+        env[name] = env[bundle_name]
+    env.setdefault("PREFIX", "visier-sdlc-")
+    env.setdefault("TABLE", "promotion_state")
     catalog, schema, prefix = env["CATALOG"], env["SCHEMA"], env.get("PREFIX", "")
+    table = env["TABLE"]
+    if not re.fullmatch(r"[A-Za-z_]\w*", table):
+        raise ValueError("State table name must be a simple identifier")
     for part in (catalog, schema):
         if not IDENT.fullmatch(part):
             raise ValueError(f"Invalid identifier: {part!r}")
@@ -89,8 +109,9 @@ def main(env=None):
     upsert_secrets(workspace, catalog, schema, secret_values(env, prefix))
     principal = workspace.apps.get(env["APP_NAME"]).service_principal_client_id
     if not principal:
-        raise RuntimeError(f"App {env['APP_NAME']} has no service principal; run `databricks bundle deploy` first")
+        raise RuntimeError(f"App {env['APP_NAME']} has no service principal; create the app first")
     names = grant_secret_access(workspace, catalog, schema, prefix, principal)
+    _grant(workspace, "table", f"{catalog}.{schema}.{table}", principal, ["SELECT", "MODIFY"])
     print(f"READ_SECRET granted to {principal} on {len(names)} secret(s): {', '.join(names)}")
 
 

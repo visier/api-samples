@@ -4,10 +4,8 @@ import os
 
 
 FIELDS = {
-    "host": "HOST", "api_key": "APIKEY", "vanity": "VANITY",
-    "username": "USERNAME", "password": "PASSWORD", "client_id": "CLIENT_ID",
-    "client_secret": "CLIENT_SECRET", "access_token": "ACCESS_TOKEN",
-    "asid_token": "ASID_TOKEN", "tenant_id": "TENANT_ID",
+    "host": "HOST", "vanity": "VANITY", "username": "USERNAME",
+    "password": "PASSWORD", "tenant_id": "TENANT_ID",
 }
 
 

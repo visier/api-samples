@@ -61,11 +61,11 @@ class VisierGateway:
     def __init__(self, credentials):
         import visier_platform_sdk as sdk
 
-        class OptionalApiKeyConfiguration(sdk.Configuration):
+        class BasicConfiguration(sdk.Configuration):
             def auth_settings(self):
                 auth = super().auth_settings()
-                if not self.api_key:
-                    auth.pop("ApiKeyAuth", None)
+                # The generated SDK always includes ApiKeyAuth, even when unset.
+                auth.pop("ApiKeyAuth", None)
                 return auth
 
         gateway = self
@@ -75,7 +75,7 @@ class VisierGateway:
                 if self.configuration.refresh_config:
                     self.configuration.refresh_config(self.configuration, True)
                     self.update_params_for_auth(
-                        headers, post_params, ["ApiKeyAuth", "CookieAuth", "OAuth2Auth"],
+                        headers, post_params, ["CookieAuth"],
                         None, None, None)
 
             def call_api(self, method, url, header_params=None, body=None,
@@ -120,49 +120,28 @@ class VisierGateway:
         for role in ("source", "target"):
             config = dict(credentials.configuration(role))
             self.tenant_ids[role] = config.pop("tenant_id", None)
+            unsupported = config.keys() - {"host", "vanity", "username", "password"}
+            if unsupported:
+                raise ValueError(f"Unsupported {role} credential fields: {', '.join(sorted(unsupported))}. "
+                                 "Use host, vanity, username, and password.")
             if not all(config.get(k) for k in ("host", "vanity")):
                 raise ValueError(f"Configure {role.upper()}_HOST and {role.upper()}_VANITY before enabling live mode")
             # Hostname only: no scheme, path, or credentials.
             self.hosts[role] = urlsplit(config["host"]).hostname
-            if not (config.get("access_token") or config.get("asid_token") or (config.get("username") and config.get("password"))):
-                raise ValueError(f"Configure authentication for {role}")
-            # The SDK's OAuth token exchange always adds an apikey header. An empty
-            # value is valid HTTP; None is not. Omit it from API calls above.
-            config["api_key"] = config.get("api_key") or ""
+            if not all(config.get(k) for k in ("username", "password")):
+                raise ValueError(f"Configure {role.upper()}_USERNAME and {role.upper()}_PASSWORD before enabling live mode")
             # Never retry a publish after a transport error: it may have succeeded.
-            configuration = OptionalApiKeyConfiguration(**config, retries=0)
-            if config.get("username") and config.get("password"):
-                configuration.refresh_config = partial(self._refresh, role, configuration.refresh_config)
-            else:
-                # Supplied tokens need no login. The SDK's default refresh hook
-                # rejects token-only configurations for lacking username/password.
-                configuration.refresh_config = None
+            configuration = BasicConfiguration(**config, retries=0)
+            configuration.refresh_config = partial(self._refresh, role, configuration.refresh_config)
             client = DiagnosticApiClient(configuration)
             client.tenant_role = role
             self.clients[role] = client
 
     def _refresh(self, role, callback, configuration, force=False):
-        # The same client is shared by requests in a worker. Do not race token
-        # exchanges (in particular, rotating OAuth refresh tokens).
+        # The same client is shared by requests in a worker. Serialize logins.
         with self.auth_locks[role]:
             try:
-                used_refresh_token = bool(configuration.client_id and configuration.client_secret
-                                          and configuration.refresh_token)
-                try:
-                    callback(configuration, force)
-                except self.sdk.ApiException as error:
-                    try:
-                        details = json.loads(error.body or "{}")
-                    except (ValueError, UnicodeError):
-                        details = {}
-                    if (not used_refresh_token or error.status not in (400, 401)
-                            or not isinstance(details, dict) or details.get("error") != "invalid_grant"):
-                        raise
-                    # A refresh token can expire or be revoked independently of
-                    # the access token. Stored credentials allow a fresh login.
-                    configuration.refresh_token = None
-                    configuration.access_token = None
-                    callback(configuration, True)
+                callback(configuration, force)
             except Exception as error:
                 raise self._failure(role, "authentication token request", error=error) from None
 
@@ -205,9 +184,6 @@ class VisierGateway:
                 value = details.get(field)
                 if isinstance(value, str) and re.fullmatch(pattern, value):
                     parts.append(f"{field}={value}")
-            oauth_error = details.get("error")
-            if oauth_error in ("invalid_request", "invalid_client", "invalid_grant", "unauthorized_client", "unsupported_grant_type", "invalid_scope"):
-                parts.append(oauth_error)
         message = "; ".join(parts) + "."
         if status == 401:
             if stage == "authentication token request":

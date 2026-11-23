@@ -3,13 +3,18 @@
 # src/visier-sdlc/README.md ("Initialize and deploy").
 #
 # Works with either option from the README:
-#   dotenv run -- ./deploy.sh      # Option 1: values from .env
-#   ./deploy.sh                    # Option 2: BUNDLE_VAR_* already exported
+#   dotenv run -- ./deploy.sh      # Values from .env
+#   ./deploy.sh                    # BUNDLE_VAR_* exported or native variable file
 #
 # Run from the visier_sdlc/ directory (where databricks.yml lives).
 set -euo pipefail
 
 cd "$(dirname "$0")"
+
+if (( $# > 0 )); then
+  echo "Usage: ./deploy.sh (set bundle variables using the CLI's standard configuration)" >&2
+  exit 2
+fi
 
 step() {
   echo
@@ -20,11 +25,11 @@ step() {
 # 0. Validate
 step databricks bundle validate
 
-# 1. Create/update the app and its service principal (required before secrets are granted).
-step databricks bundle deploy
+# 1. Create the table before registering it as an app resource (no deployed job needed).
+step databricks bundle run setup_table
 
-# 2. Create the promotion state table.
-step databricks bundle run sql_setup_job
+# 2. Create/update the app and its service principal (required before secrets are granted).
+step databricks bundle deploy
 
 # 3. Create/update tenant secrets and grant the app's service principal access.
 step databricks bundle run setup_secrets
