@@ -24,7 +24,7 @@ def make_workspace(names, existing=()):
 
 
 def test_secret_values_maps_env_to_names_and_skips_empty():
-    env = {"SECRET_SOURCE_HOST": "https://a", "SECRET_TARGET_USERNAME": "k", "SECRET_SOURCE_PASSWORD": ""}
+    env = {"BUNDLE_VAR_secret_source_host": "https://a", "BUNDLE_VAR_secret_target_username": "k", "BUNDLE_VAR_secret_source_password": ""}
     assert secret_values(env, "p-") == {"p-source-host": "https://a", "p-target-username": "k"}
 
 
@@ -103,32 +103,27 @@ def test_standalone_ui_setup_accepts_the_same_bundle_environment(monkeypatch):
     assert calls[-1][2]["changes"][0]["add"] == ["SELECT", "MODIFY"]
 
 
-@pytest.mark.parametrize("name,variable", [
-    ("CATALOG", "catalog_name"), ("SCHEMA", "schema_name"),
-    ("PREFIX", "secret_prefix"), ("APP_NAME", "app_name"), ("TABLE", "state_table_name"),
-    *[(f"SECRET_{role}_{field}".upper(), f"secret_{role}_{field}")
-      for role in ("source", "target") for field in ("host", "vanity", "username", "password")],
-])
-@pytest.mark.parametrize("ambient", ["different-private-value", ""])
-def test_conflicting_inputs_fail_before_connecting(monkeypatch, name, variable, ambient):
+def test_legacy_environment_does_not_override_bundle_inputs(monkeypatch):
     from scripts import setup_secrets
 
-    monkeypatch.setattr(setup_secrets, "WorkspaceClient", lambda: pytest.fail("Must validate before connecting"))
-    with pytest.raises(ValueError, match=f"Conflicting values for {name} and BUNDLE_VAR_{variable}") as caught:
-        setup_secrets.main({name: ambient, f"BUNDLE_VAR_{variable}": "private-value"})
-    assert "private-value" not in str(caught.value)
-
-
-def test_equal_duplicate_inputs_and_custom_table_are_accepted(monkeypatch):
-    from scripts import setup_secrets
-
-    ws, calls, *_ = make_workspace(["visier-sdlc-source-host", "visier-sdlc-target-host"])
-    ws.apps = SimpleNamespace(get=lambda name: SimpleNamespace(service_principal_client_id="sp-id"))
+    ws, calls, created, _ = make_workspace(["visier-sdlc-source-host", "visier-sdlc-target-host"])
+    ws.apps = SimpleNamespace(get=lambda name: SimpleNamespace(service_principal_client_id="sp-id")
+                              if name == "customer-app" else pytest.fail("wrong app"))
     monkeypatch.setattr(setup_secrets, "WorkspaceClient", lambda: ws)
     setup_secrets.main({
-        "CATALOG": "cat", "BUNDLE_VAR_catalog_name": "cat",
-        "SCHEMA": "sch", "BUNDLE_VAR_schema_name": "sch",
-        "APP_NAME": "app", "BUNDLE_VAR_app_name": "app",
-        "TABLE": "custom_state", "BUNDLE_VAR_state_table_name": "custom_state",
+        "BUNDLE_VAR_catalog_name": "cat", "BUNDLE_VAR_schema_name": "sch",
+        "BUNDLE_VAR_app_name": "customer-app", "BUNDLE_VAR_state_table_name": "custom_state",
+        "BUNDLE_VAR_secret_source_password": "resolved-password",
+        "CATALOG": "unrelated", "SCHEMA": "unrelated", "TABLE": "unrelated",
+        "APP_NAME": "unrelated", "PREFIX": "unrelated-", "SECRET_SOURCE_PASSWORD": "unrelated",
     })
+    assert created == [("visier-sdlc-source-password", "resolved-password")]
     assert calls[-1][1].endswith("table/cat.sch.custom_state")
+
+
+def test_legacy_names_are_not_used_as_fallback(monkeypatch):
+    from scripts import setup_secrets
+
+    monkeypatch.setattr(setup_secrets, "WorkspaceClient", lambda: pytest.fail("Must not connect"))
+    with pytest.raises(KeyError, match="BUNDLE_VAR_catalog_name"):
+        setup_secrets.main({"CATALOG": "cat", "SCHEMA": "sch", "APP_NAME": "app"})

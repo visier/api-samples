@@ -155,7 +155,7 @@ Use either local CLI deployment or direct deployment from Git in Databricks Apps
 | Configuration | `databricks.yml`, bundle variables, and app resource configuration | The app's `app.yaml` plus resource selections in the Apps UI |
 | Deployment values | Choose a JSON settings file or `BUNDLE_VAR_*` environment variables | Select resources in Apps and provision secrets in Catalog Explorer; bundle variable files are not read |
 | Table and warehouse | Defined as bundle app resources | Create/select existing resources, then attach them to the app |
-| Tenant secrets | `setup_secrets` provisions and grants UC secrets | An administrator creates UC secrets and grants access in Catalog Explorer |
+| Tenant secrets | `setup_secrets` provisions and grants UC secrets | Provision in Catalog Explorer or run the same local `setup_secrets` bundle command |
 | Start/update code | `databricks bundle run visier_sdlc_app` | Deploy the selected Git branch, tag, or commit in Apps |
 
 **1. Local CLI deployment**
@@ -244,6 +244,8 @@ The script validates the bundle, checks for deleted apps still tracked in deploy
 
 If an app was deleted outside the bundle, Databricks CLI 1.25.0 can crash in `ResourceApp.OverrideChangeDesc` while planning its recreation. The script checks bound apps against the workspace and runs `bundle deployment unbind` only for an app confirmed missing. Deployment then recreates the app, and secret provisioning grants its new service principal access. Existing apps and other bundle resources keep their bindings; authentication, permission, or network failures stop deployment without unbinding the affected app. Use `./deploy.sh` for this recovery rather than running `databricks bundle deploy` directly.
 
+`./deploy.sh` automatically runs `databricks bundle run prepare_deploy` before deployment. This is a repair for stale bundle bindings, not table or secret provisioning. When running the bundle deployment steps manually, call it before `databricks bundle deploy`, using the same profile, target, and variables. It does nothing when no bound app is missing. It is unnecessary for Apps UI/Git deployments, including local provisioning for a UI-created app.
+
 **Undeploy the CLI bundle**
 
 Use the same Python environment, workspace profile, and bundle variable values as deployment. From `visier_sdlc/`, preview the cleanup, then run it:
@@ -281,13 +283,23 @@ This route fetches the app source directly from GitHub (or another supported Git
    These names use the committed `app.yaml` prefix, `visier-sdlc-`. Open each secret's **Permissions → Grant** and grant the app's service principal **READ SECRET**. Ensure it also has **USE CATALOG** and **USE SCHEMA** on the parents, and **SELECT** and **MODIFY** on the attached state table. Adding the table resource normally establishes the table and parent privileges. Creating secrets requires **CREATE SECRET** on the schema (or ownership); granting access requires ownership or **MANAGE**. Do not put the secret values in GitHub or `app.yaml`.
 5. In Apps, choose **Deploy → From Git**, select the branch, tag, or commit, set **Source code path** to `visier_sdlc/src/visier-sdlc`, and deploy. Check the app's status and logs. For later code changes, redeploy from Git. After changing secrets, restart or redeploy the app so it reloads the values.
 
-**Optional scripted provisioning:** Administrators who already use the CLI can automate step 4 instead. Clone the repository locally (or into a workspace Git folder accessible from a web terminal), install the Python requirements using the CLI setup instructions above, and authenticate to the intended workspace. For a local named profile, set `DATABRICKS_CONFIG_PROFILE=<profile>` after `databricks auth login --profile <profile>`. From the checkout's `visier_sdlc/` directory, populate `.env` from `.env.template` with the same catalog, schema, app name, table name, prefix, and eight tenant values, then run:
+**Optional local provisioning for a UI-created app:** Use the CLI to provision both the table and secrets instead of the browser steps 1 and 4. Clone the repository locally, install the Python requirements using the CLI setup instructions above, and authenticate to the intended workspace. For a local named profile, set `DATABRICKS_CONFIG_PROFILE=<profile>` after `databricks auth login --profile <profile>`. The catalog and schema must already exist, and the app must already have been created in Apps so its service principal exists. From the checkout's `visier_sdlc/` directory, choose the same configuration options as CLI deployment: either fill `.databricks/bundle/default/variable-overrides.json` from `deployment.template.json`, or supply `BUNDLE_VAR_*` environment variables. Set `app_name` to the existing UI-created app's name and use the same warehouse, table, catalog, schema, and secret prefix that the app will use. With a JSON settings file or exported variables, run:
 
 ```sh
-dotenv run -- python3 src/visier-sdlc/scripts/setup_secrets.py
+databricks bundle run setup_table
+databricks bundle run setup_secrets
 ```
 
-This creates/updates the supported tenant secrets and grants the app access to them and the state table; it does not deploy a bundle or start the app. If both a script input (such as `CATALOG`, `TABLE`, or `SECRET_SOURCE_PASSWORD`) and its `BUNDLE_VAR_*` equivalent are present, their values must match, including empty values. Conflicts fail before connecting to Databricks, and credential values are never included in the error.
+If supplying `BUNDLE_VAR_*` through a local `.env` copied from `.env.template`, load it for both commands:
+
+```sh
+dotenv run -- databricks bundle run setup_table
+dotenv run -- databricks bundle run setup_secrets
+```
+
+These commands create the table if missing, create/update the supported tenant secrets, and grant the app access to the secrets and state table. They run local scripts using bundle-resolved settings and authentication; they do not deploy bundle resources, take ownership of the UI-created app, or start it. Complete the resource attachments in step 3 and deploy from Git in step 5. No `prepare_deploy`, `bundle deploy`, or `./deploy.sh` is needed for this route. Your provisioning identity needs permission to create the table and secrets and grant the app access.
+
+Use `databricks bundle run` for setup with either configuration option. The CLI resolves native JSON settings, `BUNDLE_VAR_*` environment variables, and `--var` overrides using its standard precedence, then passes resolved values to both scripts under the same `BUNDLE_VAR_*` names. Legacy script names such as `CATALOG`, `SCHEMA`, `TABLE`, and `SECRET_SOURCE_PASSWORD` are no longer read. Calling a Python script directly bypasses bundle settings-file resolution. A JSON settings file must be at the native path above; `deployment.template.json` is only a template.
 
 The committed `app.yaml` contains only resource keys and application defaults: `visier-sdlc-`, Development, and Production. Direct Git deployment uses those defaults. For custom labels or a different prefix in this route, change those three application defaults in `app.yaml` on a customer-controlled branch/fork, and use the same prefix during secret provisioning. The bundle route instead supplies them as variables without changing source. Do not put credential values, catalog/schema names, warehouse IDs, or app names in `app.yaml`. This is the main configuration difference between the routes; a local JSON file cannot alter code fetched directly from Git by the Apps UI.
 

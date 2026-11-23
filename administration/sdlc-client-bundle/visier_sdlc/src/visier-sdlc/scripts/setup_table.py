@@ -9,14 +9,16 @@ from databricks.sdk.service.sql import StatementParameterListItem, StatementStat
 
 
 def setup_table(workspace, env):
-    for key in ("CATALOG", "SCHEMA", "TABLE"):
-        if not re.fullmatch(r"[A-Za-z_]\w*", env[key]):
+    names = {"catalog": env["BUNDLE_VAR_catalog_name"], "schema": env["BUNDLE_VAR_schema_name"],
+             "table": env.get("BUNDLE_VAR_state_table_name", "promotion_state")}
+    for key, value in names.items():
+        if not re.fullmatch(r"[A-Za-z_]\w*", value):
             raise ValueError(f"{key} must be a simple identifier")
     statement = (Path(__file__).resolve().parents[3] / "sql/init_tables.sql").read_text(encoding="utf-8")
-    parameters = [StatementParameterListItem(name=key.lower(), value=env[key], type="STRING")
-                  for key in ("CATALOG", "SCHEMA", "TABLE")]
+    parameters = [StatementParameterListItem(name=key, value=value, type="STRING")
+                  for key, value in names.items()]
     response = workspace.statement_execution.execute_statement(
-        statement=statement, warehouse_id=env["WAREHOUSE_ID"], parameters=parameters, wait_timeout="30s")
+        statement=statement, warehouse_id=env["BUNDLE_VAR_warehouse_id"], parameters=parameters, wait_timeout="30s")
     statement_id = response.statement_id
     while response.status and response.status.state in (StatementState.PENDING, StatementState.RUNNING):
         time.sleep(1)

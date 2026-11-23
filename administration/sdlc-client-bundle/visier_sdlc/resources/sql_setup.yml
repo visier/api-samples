@@ -1,10 +1,10 @@
 scripts:
   setup_table:
     env:
-      CATALOG: ${var.catalog_name}
-      SCHEMA: ${var.schema_name}
-      TABLE: ${var.state_table_name}
-      WAREHOUSE_ID: ${var.warehouse_id}
+      BUNDLE_VAR_catalog_name: ${var.catalog_name}
+      BUNDLE_VAR_schema_name: ${var.schema_name}
+      BUNDLE_VAR_state_table_name: ${var.state_table_name}
+      BUNDLE_VAR_warehouse_id: ${var.warehouse_id}
     content: python3 src/visier-sdlc/scripts/setup_table.py
 
 resources:

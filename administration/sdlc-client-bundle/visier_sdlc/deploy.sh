@@ -26,7 +26,7 @@ step() {
 step databricks bundle validate
 
 # Clear bindings to deleted apps before the CLI's deployment planner reads them.
-step python3 src/visier-sdlc/scripts/prepare_deploy.py
+step databricks bundle run prepare_deploy
 
 # 1. Create the table before registering it as an app resource (no deployed job needed).
 step databricks bundle run setup_table

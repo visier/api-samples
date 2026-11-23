@@ -1,12 +1,12 @@
 """Create/update the tenant secrets in Unity Catalog and grant the app READ_SECRET on them.
 
-Run through the bundle (which supplies every value from bundle variables, so BUNDLE_VAR_* in the
-environment or an interactive prompt):
+Run through the bundle, which resolves settings files, BUNDLE_VAR_* environment
+variables, and --var overrides and passes the results as BUNDLE_VAR_* inputs:
 
     databricks bundle run setup_secrets
 
-Secret values travel only from your environment to Unity Catalog; they are never put in the bundle
-or in a deployed job. Secrets are named {prefix}{source|target}-{field} (underscores become
+Secret values are passed to this local process, never to a deployed job.
+Secrets are named {prefix}{source|target}-{field} (underscores become
 hyphens). A non-empty value creates the secret or updates it; an empty value leaves any existing
 secret untouched. Afterwards the supported tenant secrets in catalog.schema with the prefix are granted
 READ_SECRET for the app's service principal (looked up from the deployed app), plus USE CATALOG /
@@ -29,11 +29,11 @@ REQUIRED = ("source-host", "target-host")
 
 
 def secret_values(env, prefix):
-    """{secret name: value} for every non-empty SECRET_{ROLE}_{FIELD} environment value."""
+    """Map non-empty BUNDLE_VAR_secret_{role}_{field} inputs to secret names."""
     values = {}
     for role in ROLES:
         for field in FIELDS:
-            value = env.get(f"SECRET_{role}_{field}".upper(), "")
+            value = env.get(f"BUNDLE_VAR_secret_{role}_{field}", "")
             if value:
                 values[f"{prefix}{role}-{field.replace('_', '-')}"] = value
     return values
@@ -82,24 +82,10 @@ def grant_secret_access(workspace, catalog, schema, prefix, principal):
 
 def main(env=None):
     env = os.environ if env is None else env
-    # The bundle passes script variables; standalone UI-app setup can use the
-    # same BUNDLE_VAR_* inputs used by CLI deployment, without deploying a bundle.
-    inputs = {"CATALOG": "catalog_name", "SCHEMA": "schema_name", "PREFIX": "secret_prefix",
-              "APP_NAME": "app_name", "TABLE": "state_table_name"}
-    inputs.update({f"SECRET_{role}_{field}".upper(): f"secret_{role}_{field}"
-                   for role in ROLES for field in FIELDS})
-    env = dict(env)
-    for name, variable in inputs.items():
-        bundle_name = f"BUNDLE_VAR_{variable}"
-        if bundle_name not in env:
-            continue
-        if name in env and env[name] != env[bundle_name]:
-            raise ValueError(f"Conflicting values for {name} and {bundle_name}")
-        env[name] = env[bundle_name]
-    env.setdefault("PREFIX", "visier-sdlc-")
-    env.setdefault("TABLE", "promotion_state")
-    catalog, schema, prefix = env["CATALOG"], env["SCHEMA"], env.get("PREFIX", "")
-    table = env["TABLE"]
+    catalog, schema = env["BUNDLE_VAR_catalog_name"], env["BUNDLE_VAR_schema_name"]
+    prefix = env.get("BUNDLE_VAR_secret_prefix", "visier-sdlc-")
+    table = env.get("BUNDLE_VAR_state_table_name", "promotion_state")
+    app_name = env["BUNDLE_VAR_app_name"]
     if not re.fullmatch(r"[A-Za-z_]\w*", table):
         raise ValueError("State table name must be a simple identifier")
     for part in (catalog, schema):
@@ -107,9 +93,9 @@ def main(env=None):
             raise ValueError(f"Invalid identifier: {part!r}")
     workspace = WorkspaceClient()
     upsert_secrets(workspace, catalog, schema, secret_values(env, prefix))
-    principal = workspace.apps.get(env["APP_NAME"]).service_principal_client_id
+    principal = workspace.apps.get(app_name).service_principal_client_id
     if not principal:
-        raise RuntimeError(f"App {env['APP_NAME']} has no service principal; create the app first")
+        raise RuntimeError(f"App {app_name} has no service principal; create the app first")
     names = grant_secret_access(workspace, catalog, schema, prefix, principal)
     _grant(workspace, "table", f"{catalog}.{schema}.{table}", principal, ["SELECT", "MODIFY"])
     print(f"READ_SECRET granted to {principal} on {len(names)} secret(s): {', '.join(names)}")

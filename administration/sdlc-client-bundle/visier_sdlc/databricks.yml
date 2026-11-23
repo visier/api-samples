@@ -4,6 +4,10 @@ bundle:
 include:
   - resources/*.yml
 
+scripts:
+  prepare_deploy:
+    content: python3 src/visier-sdlc/scripts/prepare_deploy.py
+
 sync:
   exclude:
     - deployment.json
