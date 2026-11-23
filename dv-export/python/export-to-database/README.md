@@ -1,6 +1,6 @@
 # DV Export Script
 This script provides an example for using the Visier Data Version Export API through the
-[Visier Python Connector](https://github.com/visier/connector-python) to export and process data versions from Visier. For more information about the Data Version Export API, see [Data Version Export API](https://docs.visier.com/developer/apis/data-out/data-version-export/data-version-export-api.htm).
+[Visier Python SDKs](https://github.com/visier/python-sdk) to export and process data versions from Visier. For more information about the Data Version Export API, see [Data Version Export API](https://docs.visier.com/developer/apis/data-out/data-version-export/data-version-export-api.htm).
 
 ## Getting Started
 ### Environment
@@ -8,23 +8,23 @@ Python 3.x installed on your system.
 
 You have cloned the repository.
 
-Installed dependencies: `dotenv`, `visier-connector`, `pandas`, and `sqlalchemy`. You can install them using `pip` and the provided `requirements.txt`:
+Installed dependencies: `python-dotenv`, `visier-platform-sdk`, `pandas`, and `sqlalchemy`. You can install them using `pip` and the provided `requirements.txt`:
 ```
-# cd into ../dv-export/python working directory
-python3 -m venv venv
-source venv/bin/activate
+# cd into the dv-export/python/export-to-database directory
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 Configured the .env files. The provided `.env.dv-export` file contains parameters specific to the script. 
-`.env.visier-auth` contains variables for the Visier Python Connector.
+`.env.visier-auth` contains variables for the Visier Python SDK.
 
 Note that the provided `BASE_DOWNLOAD_DIRECTORY` will be **deleted** if `DELETE_BASE_DOWNLOAD_DIRECTORY_AFTER_EXPORT` is `True`. 
 Use a new or empty directory, not a shared directory like `~/Downloads/`. The script will create a new directory if one
 does not exist at the provided location.
 
 ### Visier user configuration
-For more information about authentication with the Visier Python Connector, see [Visier Python Connector](https://github.com/visier/connector-python).
+This script authenticates using the [Visier Python SDKs](https://github.com/visier/python-sdk). For more authentication options, see [API Authentication](https://docs.visier.com/visier-people/Default.htm#cshid=1054).
 
 In addition to the capabilities mentioned above, the user will need:
 - The `Manage Jobs` capability to be able to schedule DV export jobs. 
@@ -36,7 +36,7 @@ To use the script, you primarily interact with `main.py`. Here's a brief overvie
 - It configures logging settings.
 - Parses command line arguments
 - Loads environment variables from the .env file.
-- Authenticates with Visier using the provided credentials through the Visier Python Connector
+- Authenticates with Visier using the provided credentials through the Visier Python SDK
 - Initiates a `DV Export` session.
 - Kicks off metadata generation and/or processing for data version exports, either initial or delta, based on the provided parameters.
 

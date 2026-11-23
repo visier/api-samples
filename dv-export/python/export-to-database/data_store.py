@@ -102,27 +102,28 @@ class SQLAlchemyDataStore(DataStore):
                                      file_paths_for_tbl: list[str]):
         logger.info(f"Begin processing data from files={file_paths_for_tbl} for table={tbl_name}")
         clm_name_to_dtype = convert_data_types_to_df_dtype_dict(column_infos)
+        str_columns = {
+            clm_name for clm_name, dtype in clm_name_to_dtype.items() if dtype == PANDAS_DF_MIXED_DTYPE
+        }
         for file_path in file_paths_for_tbl:
-            with open(file_path) as f:
-                df = pd.read_csv(f, dtype=clm_name_to_dtype, on_bad_lines='warn')
+            # export files are gzip-compressed CSV files, read them in batches to limit memory use
+            with pd.read_csv(file_path, compression='gzip', dtype=clm_name_to_dtype, on_bad_lines='warn',
+                             chunksize=INSERT_BATCH_SIZE_ROWS) as reader:
+                for df in reader:
+                    # after loading the DF, replace NaN with empty string for string columns
+                    for str_column in str_columns:
+                        df[str_column] = df[str_column].fillna('')
 
-                # after loading the DF, replace NaN with empty string for string columns
-                str_columns = {
-                    clm_name for clm_name, dtype in clm_name_to_dtype.items() if dtype == PANDAS_DF_MIXED_DTYPE
-                }
-                for str_column in str_columns:
-                    df[str_column] = df[str_column].fillna('')
-
-                inserts = df[df[DIFF_ACTION_COLUMN_NAME] == DIFF_ACTION_INSERT]
-                if len(inserts.index) != 0:
-                    with self.engine.connect() as conn:
-                        alchemy_table = self.metadata.tables[tbl_name]
-                        conn.execute(
-                            insert(alchemy_table),
-                            inserts.to_dict('records')
-                        )
-                        conn.commit()
-                    logger.info(f"Inserted {len(inserts.index)} records into table={tbl_name}")
+                    inserts = df[df[DIFF_ACTION_COLUMN_NAME] == DIFF_ACTION_INSERT]
+                    if len(inserts.index) != 0:
+                        with self.engine.connect() as conn:
+                            alchemy_table = self.metadata.tables[tbl_name]
+                            conn.execute(
+                                insert(alchemy_table),
+                                inserts.to_dict('records')
+                            )
+                            conn.commit()
+                        logger.info(f"Inserted {len(inserts.index)} records into table={tbl_name}")
 
     def drop_table(self, tbl_name: str):
         if tbl_name in self.metadata.tables.keys():
