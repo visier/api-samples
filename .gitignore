@@ -4,5 +4,4 @@ node_modules/
 .DS_Store
 .idea
 *.log
-/dv-export/python/query-changes/data
 /snapshot-recorder/tmp_storage/
