@@ -240,7 +240,27 @@ From `visier_sdlc/`, with the Python environment still active, run:
 # dotenv run -- ./deploy.sh
 ```
 
-The script validates the bundle, creates the state table, deploys the app resources, provisions secrets and grants access, then starts the app. Check the app's status and logs after starting it. The CLI synchronizes source files to Databricks as part of deployment; customers do not need to upload files manually.
+The script validates the bundle, checks for deleted apps still tracked in deployment state, creates the state table, deploys the app resources, provisions secrets and grants access, then starts the app. Check the app's status and logs after starting it. The CLI synchronizes source files to Databricks as part of deployment; customers do not need to upload files manually.
+
+If an app was deleted outside the bundle, Databricks CLI 1.25.0 can crash in `ResourceApp.OverrideChangeDesc` while planning its recreation. The script checks bound apps against the workspace and runs `bundle deployment unbind` only for an app confirmed missing. Deployment then recreates the app, and secret provisioning grants its new service principal access. Existing apps and other bundle resources keep their bindings; authentication, permission, or network failures stop deployment without unbinding the affected app. Use `./deploy.sh` for this recovery rather than running `databricks bundle deploy` directly.
+
+**Undeploy the CLI bundle**
+
+Use the same Python environment, workspace profile, and bundle variable values as deployment. From `visier_sdlc/`, preview the cleanup, then run it:
+
+```sh
+./undeploy.sh --dry-run
+./undeploy.sh
+# If using .env:
+# dotenv run -- ./undeploy.sh --dry-run
+# dotenv run -- ./undeploy.sh
+```
+
+Undeployment removes the bundle-managed app and its dedicated service principal, the SQL setup job, uploaded bundle files, the configured state table **with all promotion state and history**, and the eight `{secret_prefix}{source|target}-{host|vanity|username|password}` secrets. It revokes the app principal's table, secret, and schema setup grants before deleting the app. It does not attempt to revoke `USE_CATALOG`, which is inherited through the app principal's membership in `account users`. The catalog, schema, SQL warehouse, manually created optional `tenant-id` secrets, and local configuration files remain. The app's grants on optional `tenant-id` secrets are revoked too. This script does not undo changes already promoted to Visier tenants.
+
+**This is a full cleanup of the configured table and eight secrets, including objects that existed before deployment.** Setup does not record whether those objects were created or reused, and it cannot restore overwritten secret values. Review the preview and use the original deployment values; do not run it against a table or secrets shared with another app. Cleanup requires permission to delete the table and secrets and to revoke the app principal's table, secret, and schema setup grants.
+
+The script asks you to type `undeploy` before changing resources. Pass `--yes` to confirm for unattended runs. Missing resources are skipped so a partial cleanup can be retried; other errors stop the script. If a crashed deployment left a lock, use `./undeploy.sh --force-lock` only after confirming no deployment is running. The script is for the CLI bundle route; it does not delete an untracked app created through the Apps UI.
 
 **2. Direct deployment from Git**
 
