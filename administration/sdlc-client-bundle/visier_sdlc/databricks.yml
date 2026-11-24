@@ -6,18 +6,16 @@ include:
 
 scripts:
   prepare_deploy:
-    content: python3 src/visier-sdlc/scripts/prepare_deploy.py
+    content: uv run --locked --no-dev --project src/visier-sdlc python src/visier-sdlc/scripts/prepare_deploy.py
 
 sync:
   exclude:
     - deployment.json
     - src/visier-sdlc/tests/**
     - src/visier-sdlc/.env*
-    - src/visier-sdlc/pytest.ini
     - src/visier-sdlc/instance/**
     - src/visier-sdlc/**/__pycache__/**
     - src/visier-sdlc/**/*.pyc
-    - src/visier-sdlc/requirements-dev.txt
 
 variables:
   catalog_name:

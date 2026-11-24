@@ -3,8 +3,8 @@
 # src/visier-sdlc/README.md ("Initialize and deploy").
 #
 # Works with either option from the README:
-#   dotenv run -- ./deploy.sh      # Values from .env
-#   ./deploy.sh                    # BUNDLE_VAR_* exported or native variable file
+#   uv run --locked --no-dev --project src/visier-sdlc --env-file .env ./deploy.sh
+#   ./deploy.sh  # BUNDLE_VAR_* exported or native variable file
 #
 # Run from the visier_sdlc/ directory (where databricks.yml lives).
 set -euo pipefail

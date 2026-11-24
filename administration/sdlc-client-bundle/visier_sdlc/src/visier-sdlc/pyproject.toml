@@ -1,0 +1,33 @@
+[project]
+name = "visier-sdlc"
+version = "0.1.0"
+description = "Visier tenant promotion app for Databricks Apps"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "click==8.5.1",
+    "databricks-sdk==0.163.0",
+    "Flask==3.1.3",
+    "gunicorn==26.2.0",
+    "python-dotenv==1.2.1",
+    "urllib3==2.8.0",
+    "visier-platform-sdk==22222222.99201.3304",
+]
+
+[dependency-groups]
+dev = ["pytest==8.4.2"]
+
+[tool.uv]
+package = false
+# Databricks Apps and the local interpreter pin use CPython.
+environments = ["platform_python_implementation == 'CPython'"]
+# Keep test tooling out of deployment installs; opt in locally with --dev.
+default-groups = []
+
+[[tool.uv.index]]
+# Keep public downloads ahead of a user-level default corporate mirror.
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

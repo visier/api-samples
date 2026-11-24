@@ -4,19 +4,34 @@ A Flask-backed single-page app for promoting production versions from a Visier d
 
 ## Run locally
 
-Use Python 3.11 or later with OpenSSL. Python 3.9 is supported by the code and SDK, but Apple's bundled Python uses LibreSSL, which the SDK's urllib3 dependency warns is unsupported for live HTTPS connections.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/). This project uses CPython 3.11, selected by `.python-version` and constrained by `requires-python` in `pyproject.toml`. uv finds or downloads a compatible interpreter and manages `.venv` automatically; no environment activation is required. Configure package access below before the first sync.
 
 ```sh
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
+uv sync --locked --dev
 cp .env.example .env
-python app.py
+uv run --locked python app.py
 ```
 
-Open **http://127.0.0.1:5050**. No JavaScript build or Node installation is required. Your existing pip/Artifactory configuration is used; no repository URL or credentials belong in requirements files. The implementation was verified with SDK `22222222.99201.3254`, fetched from the configured Artifactory.
+Open **http://127.0.0.1:5050**. No JavaScript build or Node installation is required. The migration preserves the installed Visier SDK version, `22222222.99201.3304`.
 
 The demo starts with three pending development versions, a disabled last-synced baseline, and one production drift version. Roll back, select a development version, then sync. Selecting v127 includes v126; v128 remains pending. Use **Simulate production drift** to exercise rollback again. Demo history and sync state survive app restarts in `instance/promotion.sqlite3`; demo and live state use separate tenant-pair keys.
+
+### Dependencies and package access
+
+`pyproject.toml` declares runtime dependencies and the optional `dev` dependency group. `uv.lock` records exact dependency versions, sources, and hashes; commit both files after dependency changes. This app runs directly from source (`package = false`), with no wheel build. Development dependencies are excluded by default, including during Databricks builds; use `uv sync --locked --dev` and `uv run --locked --dev pytest -q` for tests.
+
+The project explicitly uses public PyPI in `pyproject.toml`; `uv.lock` records public PyPI package sources and `files.pythonhosted.org` download URLs. Both local development and Databricks builds need HTTPS access to these hosts. Local uv settings and credentials are not uploaded. See [uv package indexes](https://docs.astral.sh/uv/concepts/indexes/) and [Databricks dependency management](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/dependencies).
+
+uv does **not** read `pip.conf` or `PIP_INDEX_URL`. Environment variables such as `UV_INDEX`, `UV_EXTRA_INDEX_URL`, `UV_DEFAULT_INDEX`, and `UV_INDEX_URL` can override or add to the project configuration. If your shell points uv at a corporate mirror, clear these overrides before changing dependencies for deployment. To regenerate the lockfile from public PyPI on macOS or Linux, run from this directory:
+
+```sh
+env -u UV_INDEX -u UV_EXTRA_INDEX_URL -u UV_DEFAULT_INDEX -u UV_INDEX_URL \
+  uv lock --default-index https://pypi.org/simple
+```
+
+A lockfile generated against an internal Artifactory server can work locally while Databricks fails with **Error installing packages** because it cannot reach the recorded URLs. Changing only the build's index environment variables does not rewrite locked download URLs. Check `databricks apps logs <app-name> --source SYSTEM` (or the app's `/logz` page) for the underlying error. If your deployment requires a private repository, regenerate the lockfile against it and configure network access and build credentials in Databricks before deploying. Keep credentials out of Git; tenant credentials fetched by application code are unavailable during dependency installation.
+
+To change a dependency, run `uv add 'package==version'` (or `uv add --dev 'package==version'`) from this directory, review the lockfile changes, and run the checks below. If changing the package repository, regenerate the lockfile against that repository and verify the recorded package URLs are reachable from both local development and Databricks.
 
 ## Visual styling
 
@@ -72,20 +87,20 @@ Command-line recovery remains available. Inspect the operation/draft ID and veri
 
 ```sh
 # ONLY after confirming which production version this operation published:
-python -m flask --app app:create_app reconcile --target-version-id CONFIRMED_VERSION_ID
+uv run --locked python -m flask --app app:create_app reconcile --target-version-id CONFIRMED_VERSION_ID
 
 # OR ONLY after confirming the operation was never published:
-python -m flask --app app:create_app reconcile --not-published
+uv run --locked python -m flask --app app:create_app reconcile --not-published
 ```
 
 For an interrupted **source migration**, inspect the target sources and ensure the original worker is stopped. Then choose exactly one source outcome:
 
 ```sh
 # ONLY after verifying that the source import completed:
-python -m flask --app app:create_app reconcile --sources-imported
+uv run --locked python -m flask --app app:create_app reconcile --sources-imported
 
 # OR after inspecting any partial changes and confirming the import did not complete:
-python -m flask --app app:create_app reconcile --not-imported
+uv run --locked python -m flask --app app:create_app reconcile --not-imported
 ```
 
 Source reconciliation records the operator's finding without changing the version checkpoint. A manually confirmed success has no fabricated import counts. Version recovery flags cannot resolve a source migration, and source recovery flags cannot resolve a version operation.
@@ -139,7 +154,7 @@ Tenant credentials are Unity Catalog secrets in `catalog_name.schema_name`, name
 
 ### Initialize and deploy
 
-Choose one of the two routes below. The CLI route requires a local checkout, the Databricks CLI, and Python dependencies. The Apps UI route can be completed in the browser after an administrator provisions the table and tenant secrets. Run bundle commands from `visier_sdlc/`, where `databricks.yml` lives.
+**Recommended:** perform the initial deployment entirely from the CLI (route 1), including setting all variable values, then connect the running app to the public Visier GitHub repository in the Databricks Apps UI so later fixes are deployed from the UI instead of the shell (see **Connect the app to Git for updates** below). The fully browser-based route (route 2) is an alternative for administrators who cannot use a shell. The CLI route requires a local checkout, the Databricks CLI, uv, and access to the locked Python dependencies. Run bundle commands from `visier_sdlc/`, where `databricks.yml` lives.
 
 **Deployment values and defaults**
 
@@ -147,7 +162,7 @@ Choose one of the two routes below. The CLI route requires a local checkout, the
 
 **Two supported deployment routes**
 
-Use either local CLI deployment or direct deployment from Git in Databricks Apps. Uploading application files through the workspace UI and using the workspace bundle editor are outside the documented deployment paths.
+Use local CLI deployment for the initial deploy (recommended), followed by Git-based updates from the Apps UI. Direct deployment from Git for the initial deploy is the alternative. Uploading application files through the workspace UI and using the workspace bundle editor are outside the documented deployment paths.
 
 | | Local CLI (bundle) | Apps: Deploy from Git |
 | --- | --- | --- |
@@ -158,16 +173,16 @@ Use either local CLI deployment or direct deployment from Git in Databricks Apps
 | Tenant secrets | `setup_secrets` provisions and grants UC secrets | Provision in Catalog Explorer or run the same local `setup_secrets` bundle command |
 | Start/update code | `databricks bundle run visier_sdlc_app` | Deploy the selected Git branch, tag, or commit in Apps |
 
-**1. Local CLI deployment**
+### Databricks dependency installation
 
-Clone the repository locally, authenticate with `databricks auth login --profile <profile>`, and set `DATABRICKS_CONFIG_PROFILE` to that profile. From `visier_sdlc/`, install the Python requirements in an active virtual environment; this is required for both configuration options:
+Both deployment routes use the app directory's `pyproject.toml` and committed `uv.lock`. Databricks selects uv when both files are present and `requirements.txt` is absent. Do not add a `requirements.txt` compatibility export to this directory: it takes precedence and switches deployment back to pip. Bundle sync must include both uv files. uv apps have no pre-installed Python libraries; all runtime dependencies are declared explicitly. Both the bundle app configuration and `app.yaml` start Gunicorn through `uv run --locked --no-dev`, preserving the existing worker, thread, port, and timeout settings.
+
+**1. Local CLI deployment (recommended for the initial deploy)**
+
+Clone the repository locally, install uv, and configure package access as described above. Authenticate with `databricks auth login --profile <profile>` and set `DATABRICKS_CONFIG_PROFILE` to that profile. From `visier_sdlc/`, install the locked runtime dependencies; this is required for both configuration options:
 
 ```sh
-cd src/visier-sdlc
-python3 -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-python -m pip install -r requirements.txt
-cd ../..
+uv sync --locked --no-dev --project src/visier-sdlc
 ```
 
 Then choose **one of two ways to provide deployment values**:
@@ -228,16 +243,16 @@ Alternatively, copy `.env.template` to `.env` and fill in its `BUNDLE_VAR_*` ent
 cp .env.template .env
 ```
 
-Keep `.env` local; it is git-ignored and contains passwords. Use `dotenv run --` to load these values into the deployment command's environment.
+Keep `.env` local; it is git-ignored and contains passwords. Use `uv run --env-file .env` as shown below to load these values into the deployment command's environment.
 
 **Deploy with the selected values**
 
-From `visier_sdlc/`, with the Python environment still active, run:
+From `visier_sdlc/`, run (no environment activation is needed):
 
 ```sh
 ./deploy.sh
 # If using .env to supply BUNDLE_VAR_* values:
-# dotenv run -- ./deploy.sh
+# uv run --locked --no-dev --project src/visier-sdlc --env-file .env ./deploy.sh
 ```
 
 The script validates the bundle, checks for deleted apps still tracked in deployment state, creates the state table, deploys the app resources, provisions secrets and grants access, then starts the app. Check the app's status and logs after starting it. The CLI synchronizes source files to Databricks as part of deployment; customers do not need to upload files manually.
@@ -246,16 +261,31 @@ If an app was deleted outside the bundle, Databricks CLI 1.25.0 can crash in `Re
 
 `./deploy.sh` automatically runs `databricks bundle run prepare_deploy` before deployment. This is a repair for stale bundle bindings, not table or secret provisioning. When running the bundle deployment steps manually, call it before `databricks bundle deploy`, using the same profile, target, and variables. It does nothing when no bound app is missing. It is unnecessary for Apps UI/Git deployments, including local provisioning for a UI-created app.
 
+**Connect the app to Git for updates**
+
+After `./deploy.sh` succeeds and the app is running, an administrator can switch future code updates to the UI, so fixes never require a shell:
+
+1. In **Databricks Apps**, open the app created by the bundle and configure its Git repository: the URL of the public Visier GitHub repository (no credential is needed for a public repo).
+2. Choose **Deploy → From Git**, select the branch, tag, or commit, and set **Source code path** to `visier_sdlc/src/visier-sdlc` (the directory containing `app.py` and `app.yaml`, not the repository root or `visier_sdlc/`).
+3. Deploy, then check the app's status and logs. For later fixes, repeat step 2 with the new branch, tag, or commit.
+4. Validate the app's sharing settings and grant **Can Use** or **Can Manage** to the intended principals (see **Post-deployment: validate the app's sharing settings** below).
+
+What carries over and what does not:
+
+- The CLI deployment already created the state table, the eight tenant secrets and their grants, and the `sql-warehouse` and `promotion-state` app resources. Git deployment reuses them; do not re-enter secret values in the UI.
+- Git deployment reads the committed `app.yaml` rather than the bundle's inline configuration. Its defaults are the secret prefix `visier-sdlc-` and the `Development` / `Production` labels, and it derives the catalog and schema from the attached `promotion-state` table. If you deployed with a different `secret_prefix`, `source_name`, or `target_name`, those customizations are not applied to Git deployments; either keep the defaults or change them in `app.yaml` on a customer-controlled branch or fork and point the app at it.
+- Once the app is deployed from Git, do not run `./deploy.sh` or `databricks bundle deploy` again for code changes, since the bundle would redeploy its own synced copy of the source. Use the bundle only for infrastructure and secret changes (for example `databricks bundle run setup_secrets` to rotate a value, then restart the app) and `./undeploy.sh` for cleanup.
+
 **Undeploy the CLI bundle**
 
-Use the same Python environment, workspace profile, and bundle variable values as deployment. From `visier_sdlc/`, preview the cleanup, then run it:
+Use uv with the same workspace profile and bundle variable values as deployment. From `visier_sdlc/`, preview the cleanup, then run it:
 
 ```sh
 ./undeploy.sh --dry-run
 ./undeploy.sh
 # If using .env:
-# dotenv run -- ./undeploy.sh --dry-run
-# dotenv run -- ./undeploy.sh
+# uv run --locked --no-dev --project src/visier-sdlc --env-file .env ./undeploy.sh --dry-run
+# uv run --locked --no-dev --project src/visier-sdlc --env-file .env ./undeploy.sh
 ```
 
 Undeployment removes the bundle-managed app and its dedicated service principal, the SQL setup job, uploaded bundle files, the configured state table **with all promotion state and history**, and the eight `{secret_prefix}{source|target}-{host|vanity|username|password}` secrets. It revokes the app principal's table, secret, and schema setup grants before deleting the app. It does not attempt to revoke `USE_CATALOG`, which is inherited through the app principal's membership in `account users`. The catalog, schema, SQL warehouse, manually created optional `tenant-id` secrets, and local configuration files remain. The app's grants on optional `tenant-id` secrets are revoked too. This script does not undo changes already promoted to Visier tenants.
@@ -264,7 +294,7 @@ Undeployment removes the bundle-managed app and its dedicated service principal,
 
 The script asks you to type `undeploy` before changing resources. Pass `--yes` to confirm for unattended runs. Missing resources are skipped so a partial cleanup can be retried; other errors stop the script. If a crashed deployment left a lock, use `./undeploy.sh --force-lock` only after confirming no deployment is running. The script is for the CLI bundle route; it does not delete an untracked app created through the Apps UI.
 
-**2. Direct deployment from Git**
+**2. Direct deployment from Git (alternative: browser-only initial deploy)**
 
 This route fetches the app source directly from GitHub (or another supported Git provider). It does not read the JSON template or a populated deployment values file, and it does not run `databricks.yml`, `deploy.sh`, or the setup scripts. An administrator must provision the table and secrets before the first successful app start. No local checkout is required when following these browser-based steps:
 
@@ -282,8 +312,9 @@ This route fetches the app source directly from GitHub (or another supported Git
 
    These names use the committed `app.yaml` prefix, `visier-sdlc-`. Open each secret's **Permissions → Grant** and grant the app's service principal **READ SECRET**. Ensure it also has **USE CATALOG** and **USE SCHEMA** on the parents, and **SELECT** and **MODIFY** on the attached state table. Adding the table resource normally establishes the table and parent privileges. Creating secrets requires **CREATE SECRET** on the schema (or ownership); granting access requires ownership or **MANAGE**. Do not put the secret values in GitHub or `app.yaml`.
 5. In Apps, choose **Deploy → From Git**, select the branch, tag, or commit, set **Source code path** to `visier_sdlc/src/visier-sdlc`, and deploy. Check the app's status and logs. For later code changes, redeploy from Git. After changing secrets, restart or redeploy the app so it reloads the values.
+6. Validate the app's sharing settings and grant **Can Use** or **Can Manage** to the intended principals (see **Post-deployment: validate the app's sharing settings** below).
 
-**Optional local provisioning for a UI-created app:** Use the CLI to provision both the table and secrets instead of the browser steps 1 and 4. Clone the repository locally, install the Python requirements using the CLI setup instructions above, and authenticate to the intended workspace. For a local named profile, set `DATABRICKS_CONFIG_PROFILE=<profile>` after `databricks auth login --profile <profile>`. The catalog and schema must already exist, and the app must already have been created in Apps so its service principal exists. From the checkout's `visier_sdlc/` directory, choose the same configuration options as CLI deployment: either fill `.databricks/bundle/default/variable-overrides.json` from `deployment.template.json`, or supply `BUNDLE_VAR_*` environment variables. Set `app_name` to the existing UI-created app's name and use the same warehouse, table, catalog, schema, and secret prefix that the app will use. With a JSON settings file or exported variables, run:
+**Optional local provisioning for a UI-created app:** Use the CLI to provision both the table and secrets instead of the browser steps 1 and 4. Clone the repository locally, sync the locked Python dependencies using the CLI setup instructions above, and authenticate to the intended workspace. For a local named profile, set `DATABRICKS_CONFIG_PROFILE=<profile>` after `databricks auth login --profile <profile>`. The catalog and schema must already exist, and the app must already have been created in Apps so its service principal exists. From the checkout's `visier_sdlc/` directory, choose the same configuration options as CLI deployment: either fill `.databricks/bundle/default/variable-overrides.json` from `deployment.template.json`, or supply `BUNDLE_VAR_*` environment variables. Set `app_name` to the existing UI-created app's name and use the same warehouse, table, catalog, schema, and secret prefix that the app will use. With a JSON settings file or exported variables, run:
 
 ```sh
 databricks bundle run setup_table
@@ -293,8 +324,8 @@ databricks bundle run setup_secrets
 If supplying `BUNDLE_VAR_*` through a local `.env` copied from `.env.template`, load it for both commands:
 
 ```sh
-dotenv run -- databricks bundle run setup_table
-dotenv run -- databricks bundle run setup_secrets
+uv run --locked --no-dev --project src/visier-sdlc --env-file .env databricks bundle run setup_table
+uv run --locked --no-dev --project src/visier-sdlc --env-file .env databricks bundle run setup_secrets
 ```
 
 These commands create the table if missing, create/update the supported tenant secrets, and grant the app access to the secrets and state table. They run local scripts using bundle-resolved settings and authentication; they do not deploy bundle resources, take ownership of the UI-created app, or start it. Complete the resource attachments in step 3 and deploy from Git in step 5. No `prepare_deploy`, `bundle deploy`, or `./deploy.sh` is needed for this route. Your provisioning identity needs permission to create the table and secrets and grant the app access.
@@ -303,7 +334,16 @@ Use `databricks bundle run` for setup with either configuration option. The CLI 
 
 The committed `app.yaml` contains only resource keys and application defaults: `visier-sdlc-`, Development, and Production. Direct Git deployment uses those defaults. For custom labels or a different prefix in this route, change those three application defaults in `app.yaml` on a customer-controlled branch/fork, and use the same prefix during secret provisioning. The bundle route instead supplies them as variables without changing source. Do not put credential values, catalog/schema names, warehouse IDs, or app names in `app.yaml`. This is the main configuration difference between the routes; a local JSON file cannot alter code fetched directly from Git by the Apps UI.
 
-Choose one route to manage each app. Switching an existing app between bundle ownership and UI-managed resources requires reconciling its configuration; a later bundle deployment can reapply bundle settings.
+**Post-deployment: validate the app's sharing settings (both routes)**
+
+After the app is running, open it in **Databricks Apps**, choose **Permissions** (the app's sharing settings), and confirm who can access it. By default only the app owner and members of the `admins` group have **Can Manage**; nobody else can open the app. Grant access to the intended principals (users, groups, or service principals):
+
+- **Can Use** for people who run promotions. They can open and use the app but cannot change its configuration or permissions.
+- **Can Manage** for those who administer the app (redeploy, change resources, edit permissions).
+
+Prefer groups over individual users. The app acts with its own service principal, so promotions are limited by the app's tenant credentials, not by each viewer's permissions. Grant **Can Use** only to people you trust to promote changes to the target tenant. Re-check the list after redeploying or recreating the app, since a recreated app starts with the default permissions.
+
+Choose one route for the initial deploy of each app. The recommended combination is a CLI initial deploy followed by Git-based code updates, as described above; in that setup the bundle continues to own the app's resources and secrets, and Git only supplies the code. A later bundle deployment can reapply bundle settings and source.
 
 References: [Databricks variable files and precedence](https://docs.databricks.com/aws/en/dev-tools/bundles/variables), [Unity Catalog secret creation and permissions](https://docs.databricks.com/aws/en/security/secrets/unity-catalog-secrets), [web terminal authentication](https://docs.databricks.com/aws/en/compute/web-terminal), [Apps deployment from Git](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/deploy), and [app resource environment values](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/environment-variables).
 
@@ -337,9 +377,8 @@ The Delta adapter and secrets injection are supplied, but have not been exercise
 ## Checks
 
 ```sh
-python -m pytest -q
-# Or, with the environment activated:
-pytest -q
+uv sync --locked --dev
+uv run --locked --dev pytest -q
 ```
 
 Tests cover cumulative ranges, checkpoint persistence, full and partial sync, drift and rollback, preparation errors, uncertain publish/reconciliation, multiple workers, stale state, missing baselines, request validation, and the installed SDK's DTO/method contracts. Browser checks cover review dialogs, rollback, cumulative selection and sync, both tabs, activity, connections, and responsive layouts.

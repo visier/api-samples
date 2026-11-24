@@ -22,7 +22,7 @@ resources:
       # `databricks bundle run setup_secrets` (databricks.yml `scripts`) creates them from the
       # secret_* bundle variables and grants the service principal READ_SECRET on each.
       config:
-        command: ["gunicorn", "wsgi:app", "--bind", "0.0.0.0:8000",
+        command: ["uv", "run", "--locked", "--no-dev", "gunicorn", "wsgi:app", "--bind", "0.0.0.0:8000",
                   "--workers", "1", "--threads", "8", "--timeout", "300"]
         env:
           - name: SOURCE_NAME

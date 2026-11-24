@@ -4,4 +4,4 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-exec python3 src/visier-sdlc/scripts/undeploy.py "$@"
+exec uv run --locked --no-dev --project src/visier-sdlc python src/visier-sdlc/scripts/undeploy.py "$@"

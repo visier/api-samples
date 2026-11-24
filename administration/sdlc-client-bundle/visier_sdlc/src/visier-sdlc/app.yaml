@@ -1,4 +1,4 @@
-command: [gunicorn, "wsgi:app", --bind, "0.0.0.0:8000", --workers, "1", --threads, "8", --timeout, "300"]
+command: [uv, run, --locked, --no-dev, gunicorn, "wsgi:app", --bind, "0.0.0.0:8000", --workers, "1", --threads, "8", --timeout, "300"]
 env:
   - name: APP_MODE
     value: live

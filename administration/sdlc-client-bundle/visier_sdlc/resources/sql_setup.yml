@@ -5,7 +5,7 @@ scripts:
       BUNDLE_VAR_schema_name: ${var.schema_name}
       BUNDLE_VAR_state_table_name: ${var.state_table_name}
       BUNDLE_VAR_warehouse_id: ${var.warehouse_id}
-    content: python3 src/visier-sdlc/scripts/setup_table.py
+    content: uv run --locked --no-dev --project src/visier-sdlc python src/visier-sdlc/scripts/setup_table.py
 
 resources:
   jobs:
