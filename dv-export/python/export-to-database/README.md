@@ -24,7 +24,7 @@ Use a new or empty directory, not a shared directory like `~/Downloads/`. The sc
 does not exist at the provided location.
 
 ### Visier user configuration
-This script authenticates using the [Visier Python SDKs](https://github.com/visier/python-sdk). For more authentication options, see [API Authentication](https://docs.visier.com/visier-people/Default.htm#cshid=1054).
+This script authenticates using the [Visier Python SDKs](https://github.com/visier/python-sdk). For more authentication options, see [API Authentication](https://docs.visier.com/developer/Default.htm#cshid=1054).
 
 In addition to the capabilities mentioned above, the user will need:
 - The `Manage Jobs` capability to be able to schedule DV export jobs. 
@@ -34,9 +34,9 @@ In addition to the capabilities mentioned above, the user will need:
 ### Usage
 To use the script, you primarily interact with `main.py`. Here's a brief overview of its functionality:
 - It configures logging settings.
-- Parses command line arguments
+- Parses command line arguments.
 - Loads environment variables from the .env file.
-- Authenticates with Visier using the provided credentials through the Visier Python SDK
+- Authenticates with Visier using the provided credentials through the Visier Python SDK.
 - Initiates a `DV Export` session.
 - Kicks off metadata generation and/or processing for data version exports, either initial or delta, based on the provided parameters.
 
