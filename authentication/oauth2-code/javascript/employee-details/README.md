@@ -10,11 +10,11 @@ The application is built with server-side components because it allows passing n
 This means that API calls such as getting members and executing queries cannot be made from components rendered on the client-side as CORS-adhering browsers will require preflight checks for API calls authenticated with (Bearer) tokens.
 
 ## Prerequisites
-To successfully authenticate using Visier's OAuth APIs, you must register a client application in Visier and obtain its Client ID and Client Secret. The registered client application must also have a redirect URI that exactly matches this Employee Details application. First install the dependencies by running `yarn install`. Executing `yarn dev` will run the application in development mode. In development mode, the application will listen for authorization codes on http://localhost:3000/oauth2/callback.
+To successfully authenticate using Visier's OAuth APIs, you must register a client application in Visier and obtain its Client ID and Client Secret. The registered client application must also have a redirect URI that exactly matches this Employee Details application. First install the dependencies by running `pnpm install`. Executing `pnpm dev` will run the application in development mode. In development mode, the application will listen for authorization codes on http://localhost:3000/oauth2/callback.
 
 ## Client Environment
 The application-specific values are provided to the application through an environment file. 
-Before starting the application using `yarn dev`, create a file named `.env.development.local` to provide actual values for the following variables:
+Before starting the application using `pnpm dev`, create a file named `.env.development.local` to provide actual values for the following variables:
 ```sh
 VISIER_HOST=https://customer-specific.api.visier.io
 VISIER_CLIENT_ID='client-id-from-registration'
