@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Optional
@@ -101,18 +102,27 @@ class DVExport:
         for file_info in file_infos:
             logger.info(f"Downloading file={file_info.name} with id={file_info.file_id} for table={tbl_name}")
 
-            # Get the ApiResponse
-            api_response = self.client.call_1_alpha_download_file_with_http_info(export_uuid=export_uuid, file_id=file_info.file_id)
-            if api_response.status_code == 200:
-                file_path = download_directory + file_info.name
+            file_path = download_directory + file_info.name
+            response = self.client.call_1_alpha_download_file_without_preload_content(export_uuid=export_uuid, file_id=file_info.file_id)
+            try:
+                if response.status != 200:
+                    raise Exception(f"Failed to download file={file_info.name} with id={file_info.file_id} "
+                                    f"for table={tbl_name}. Status code: {response.status}")
                 with open(file_path, 'wb') as f:
-                    f.write(api_response.data)
-                file_paths.append(file_path)
-                logger.info(f"Downloaded file={file_info.name} with id={file_info.file_id} "
-                            f"for table={tbl_name} to file={file_path}")
-            else:
-                raise Exception(f"Failed to download file={file_info.name} with id={file_info.file_id} "
-                                f"for table={tbl_name}. Status code: {api_response.status_code}")
+                    for chunk in response.stream(1024 * 1024):
+                        f.write(chunk)
+            finally:
+                response.release_conn()
+
+            # An interrupted download can still have a 200 status, so compare the file size with the export metadata
+            downloaded_size = os.path.getsize(file_path)
+            if downloaded_size != file_info.content_length:
+                raise Exception(f"Incomplete download of file={file_info.name} with id={file_info.file_id} "
+                                f"for table={tbl_name}. Downloaded {downloaded_size} of {file_info.content_length} bytes")
+
+            file_paths.append(file_path)
+            logger.info(f"Downloaded file={file_info.name} with id={file_info.file_id} "
+                        f"for table={tbl_name} to file={file_path}")
 
         return file_paths
 

@@ -9,6 +9,9 @@ DB_URL = 'DB_URL'
 DIFF_ACTION_COLUMN_NAME = '_DiffAction_'
 DIFF_ACTION_INSERT = '+'
 
+# Number of rows to read from an export file and insert into the data store at a time
+INSERT_BATCH_SIZE_ROWS = 100000
+
 # Pandas DataFrame Dtype constants (see https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#dtypes)
 PANDAS_DF_NULLABLE_INTEGER_INT64_DTYPE = 'Int64'
 PANDAS_DF_MIXED_DTYPE = 'object'

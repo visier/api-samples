@@ -24,6 +24,7 @@ def string_to_data_type(string_value: str) -> DVExportDataType:
 class FileInfo:
     file_id: int
     name: str
+    content_length: int
 
 
 @dataclass
@@ -109,4 +110,5 @@ def _convert_to_column_info(column: DataVersionExportColumnDTO) -> ColumnInfo:
 def _convert_to_file_info(part_file: DataVersionExportPartFileDTO) -> FileInfo:
     file_id = part_file.file_id
     file_name = part_file.filename
-    return FileInfo(file_id, file_name)
+    content_length = int(part_file.content_length)
+    return FileInfo(file_id, file_name, content_length)
